@@ -1295,6 +1295,18 @@
       <button class="vp-adj-btn" onclick="adjustVpDelay(5)" title="5s later">+5</button>
     </div>
     <div class="vp-delay-display" id="vpDelayDisplay">Delay: <span id="delayDisplay">not set</span> &nbsp;|&nbsp; App clock: <span id="apiClock">waiting...</span></div>
+    <div id="vpManualSyncRow" style="display:none;margin-top:8px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:5px;font-family:'Barlow',sans-serif;">
+        Lost sync? Type current Victory+ clock:
+      </div>
+      <div class="delay-row">
+        <input type="text" class="delay-input" id="vpManualClockInput"
+          placeholder="MM:SS" maxlength="5"
+          oninput="formatVpClockInput(this)"
+          inputmode="numeric" style="font-size:18px;" />
+        <button class="delay-btn" onclick="applyManualVpClock()">Set</button>
+      </div>
+    </div>
   </div>
 
     <div class="controls" style="flex-wrap:wrap;gap:6px;">
@@ -2536,6 +2548,7 @@ function vpPeriodStart() {
   }, 1000);
   addLog('Victory+ clock started — 19:59');
   gameLogEntry('PERIOD_START');
+  document.getElementById('vpManualSyncRow').style.display = 'block';
   vpUpdateDisplay();
 }
 
@@ -2571,12 +2584,48 @@ function updateVpClockFromApi(apiSecs) {
   }
 }
 
+function formatVpClockInput(el) {
+  let v = el.value.replace(/[^0-9]/g, '');
+  if (v.length > 4) v = v.slice(0, 4);
+  if (v.length > 2) v = v.slice(0, 2) + ':' + v.slice(2);
+  el.value = v;
+}
+
+function applyManualVpClock() {
+  const input = document.getElementById('vpManualClockInput').value.trim();
+  if (!input.match(/^\d{1,2}:\d{2}$/)) {
+    addLog('Enter a valid clock e.g. 14:32', false, true);
+    return;
+  }
+  const [min, sec] = input.split(':').map(Number);
+  vpClockSecs = min * 60 + sec;
+  // Make sure clock is running
+  if (!vpClockRunning && vpClockSecs > 0) {
+    vpClockRunning = true;
+    if (!vpClockInterval) {
+      vpClockInterval = setInterval(() => {
+        if (vpClockRunning) {
+          vpClockSecs -= 1;
+          if (vpClockSecs <= 0) { vpClockSecs = 0; vpClockRunning = false; clearInterval(vpClockInterval); vpClockInterval = null; }
+        }
+        vpUpdateDisplay();
+      }, 1000);
+    }
+  }
+  document.getElementById('vpManualClockInput').value = '';
+  addLog('VP clock manually set to ' + vpFmt(vpClockSecs));
+  gameLogEntry('MANUAL_CLOCK_SET', { setTo: vpFmt(vpClockSecs) });
+  vpUpdateDisplay();
+}
+
 function clearDelay() {
   streamDelayMs = 0;
   vpClockSecs = 19 * 60 + 59;
   vpClockRunning = false;
   vpManualOffsetSecs = 0;
   if (vpClockInterval) { clearInterval(vpClockInterval); vpClockInterval = null; }
+  document.getElementById('vpManualSyncRow').style.display = 'none';
+  document.getElementById('vpManualClockInput').value = '';
   const delayEl = document.getElementById('delayDisplay');
   if (delayEl) delayEl.textContent = 'not set';
   addLog('Stream delay cleared');

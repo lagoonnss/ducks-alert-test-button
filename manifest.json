@@ -2,21 +2,21 @@
   "name": "Ducks Alert",
   "short_name": "Ducks Alert",
   "description": "Anaheim Ducks goal horn tracker",
-  "start_url": "./ducks-goal-alert-dev.html",
-  "scope": "./",
+  "start_url": "/ducks-alert-test-button/ducks-goal-alert-dev.html",
+  "scope": "/ducks-alert-test-button/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#080808",
   "theme_color": "#080808",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/ducks-alert-test-button/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "/ducks-alert-test-button/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

@@ -2,15 +2,37 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Ducks Alert">
-<title>Ducks Goal Alert</title>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#080808">
+<meta name="description" content="Anaheim Ducks goal horn tracker">
+<meta name="apple-touch-fullscreen" content="yes">
+<link rel="manifest" href="manifest.json">
+<title>Ducks Alert</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,900;1,700&family=Barlow:wght@400;500;600&display=swap');
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* ── PWA FULL SCREEN ── */
+  html, body {
+    height: 100%;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Hide scrollbar but allow scroll */
+  ::-webkit-scrollbar { display: none; }
 
   :root {
     --orange: #F47A38;
@@ -1349,11 +1371,30 @@ async function fetchGameData() {
         },
         statusDetail: status.type.detail || status.type.description || '',
         displayClock: status.displayClock || '',
-        seriesStatus: e.series ? {
-          homeWins: e.series.competitors?.find(c=>c.homeAway==='home')?.wins || 0,
-          awayWins: e.series.competitors?.find(c=>c.homeAway==='away')?.wins || 0,
-          gameNumberOfSeries: e.series.gameNumber || ''
-        } : null,
+        seriesStatus: (() => {
+          // ESPN series data
+          if (e.series) {
+            const homeComp = e.series.competitors?.find(c => c.homeAway === 'home');
+            const awayComp = e.series.competitors?.find(c => c.homeAway === 'away');
+            return {
+              homeWins: homeComp?.wins ?? homeComp?.score ?? 0,
+              awayWins: awayComp?.wins ?? awayComp?.score ?? 0,
+              gameNumberOfSeries: e.series.gameNumber || e.series.type?.abbreviation || ''
+            };
+          }
+          // Fallback: parse from notes e.g. "Game 4 - ANA leads 2-1"
+          const note = e.competitions?.[0]?.notes?.[0]?.headline || '';
+          const gameMatch = note.match(/Game (\d+)/i);
+          const scoreMatch = note.match(/(\d+)-(\d+)/);
+          if (gameMatch || scoreMatch) {
+            return {
+              homeWins: scoreMatch ? parseInt(scoreMatch[1]) : 0,
+              awayWins: scoreMatch ? parseInt(scoreMatch[2]) : 0,
+              gameNumberOfSeries: gameMatch ? gameMatch[1] : ''
+            };
+          }
+          return null;
+        })(),
         _espnId: e.id
       };
     });
@@ -2361,6 +2402,16 @@ function stopWatching() {
   document.getElementById('stopBtn').style.display = 'none';
   document.getElementById('pollingRing').className = 'polling-ring idle';
   addLog('Stopped.');
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('SW registered'))
+      .catch(err => console.log('SW error:', err));
+  });
 }
 </script>
 </body>

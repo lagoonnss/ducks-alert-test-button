@@ -1121,6 +1121,103 @@
   }
 
   .vp-delay-display span { color: var(--orange); font-weight: 700; }
+
+  /* ── HELP ── */
+  .help-btn {
+    margin-left: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.2);
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .help-btn:hover { border-color: var(--orange); color: var(--orange); }
+
+  .help-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .help-overlay.show { display: flex; }
+
+  .help-card {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 420px;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: popIn .3s cubic-bezier(.34,1.56,.64,1);
+  }
+
+  .help-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.2rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--card);
+    border-radius: 14px 14px 0 0;
+  }
+
+  .help-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 18px;
+    letter-spacing: 0.06em;
+    color: var(--orange);
+    text-transform: uppercase;
+  }
+
+  .help-close {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+
+  .help-body { padding: 0.75rem 1.2rem 1.2rem; display: flex; flex-direction: column; gap: 1rem; }
+
+  .help-section {}
+
+  .help-section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 3px;
+  }
+
+  .help-section-text {
+    font-size: 13px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.6;
+  }
+
+  .help-section-text strong { color: var(--text); }
 </style>
 
 </head>
@@ -1134,8 +1231,61 @@
   </div>
   <div class="live-badge" id="liveBadge"><span class="live-dot"></span>Live</div>
   <div class="series-badge" id="seriesBadge" style="display:none"></div>
+  <button class="help-btn" onclick="toggleHelp()">?</button>
 </header>
 <div class="goal-strobe" id="goalStrobe"></div>
+
+<div class="help-overlay" id="helpOverlay" onclick="toggleHelp()">
+  <div class="help-card" onclick="event.stopPropagation()">
+    <div class="help-header">
+      <div class="help-title">Ducks Alert — Help</div>
+      <button class="help-close" onclick="toggleHelp()">✕</button>
+    </div>
+    <div class="help-body">
+
+      <div class="help-section">
+        <div class="help-section-title">Watch Game</div>
+        <div class="help-section-text">Starts live score polling every 10 seconds. Tap this first before the game. Audio requires at least one tap before it will play.</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-title">Goal Alerts</div>
+        <div class="help-section-text">When the Ducks score, the horn fires automatically with animations and the Offspring track. When the opponent scores, a red popup appears. Both fire after your stream delay if set.</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-title">Penalty Toast</div>
+        <div class="help-section-text">A yellow notification slides up when a penalty is called, showing the player name, penalty type, and duration. Disappears after 6 seconds.</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-title">Kill Audio</div>
+        <div class="help-section-text">Immediately stops all audio — horn, goal song, and win audio. Use this if you need to silence everything quickly.</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-title">Victory+ Clock</div>
+        <div class="help-section-text">Tap <strong>▶ Period Start</strong> the moment the puck drops on Victory+. The clock counts down in sync with your stream, pausing automatically during stoppages detected by the API. Use <strong>−5 −1 +1 +5</strong> to fine-tune if it drifts. If you leave the app, type the current Victory+ clock in the input that appears after Period Start to re-sync.</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-title">Stream Delay</div>
+        <div class="help-section-text">The difference between the Victory+ clock and the API clock. Goal alerts are delayed by this amount so the horn fires when you actually see the goal on screen — not before.</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-title">Game Stats</div>
+        <div class="help-section-text">Shows live shots, faceoff %, PIM, power play %, and blocked shots for both teams. Updates every 10 seconds alongside the score.</div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-section-title">Series Info</div>
+        <div class="help-section-text">During playoffs, the top right of the header shows the current series record and game number. ANA wins shown in orange.</div>
+      </div>
+
+    </div>
+  </div>
+</div>
 <div class="goal-overlay" id="goalOverlay">
   <div class="goal-flash-bg" id="goalFlashBg"></div>
   <div class="score-ring" id="goalRing1"></div>
@@ -1431,6 +1581,11 @@ function stopHorn() {
     try { activeHornSource.stop(); } catch(e) {}
     activeHornSource = null;
   }
+}
+
+function toggleHelp() {
+  const overlay = document.getElementById('helpOverlay');
+  overlay.classList.toggle('show');
 }
 
 function killSound() {

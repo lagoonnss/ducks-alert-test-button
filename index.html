@@ -916,6 +916,89 @@
   }
 
   .series-record span { color: var(--orange); }
+
+  /* ── STREAM DELAY ── */
+  .delay-card {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+  }
+
+  .delay-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+
+  .delay-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .delay-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--orange);
+  }
+
+  .delay-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .delay-input {
+    flex: 1;
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    width: 100%;
+    -webkit-appearance: none;
+  }
+
+  .delay-input::placeholder { color: var(--muted); }
+
+  .delay-input:focus {
+    outline: none;
+    border-color: var(--orange);
+  }
+
+  .delay-btn {
+    background: var(--orange);
+    color: var(--black);
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 0.9rem;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .delay-hint {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 5px;
+    letter-spacing: 0.03em;
+    line-height: 1.5;
+  }
 </style>
 
 </head>
@@ -949,6 +1032,8 @@
   <div class="scoreboard" id="scoreCard">
     <div class="scoreboard-top">
       <div class="game-status" id="gameStatus">No game found</div>
+
+
       <div class="period-pill" id="periodInfo">—</div>
     </div>
     <div class="matchup">
@@ -965,6 +1050,8 @@
       </div>
     </div>
   </div>
+
+  
 
   <div class="goal-banner" id="goalBanner">
     <div class="goal-label">Goal!</div>
@@ -1072,7 +1159,26 @@
     </div>
   </div>
 
-  <div class="controls">
+<div class="delay-card">
+    <div class="delay-header">
+      <div class="delay-label">Stream Sync</div>
+      <div class="delay-value" id="delayDisplay">No delay set</div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;letter-spacing:0.04em;font-family:'Barlow',sans-serif;">
+      During a stoppage, type the clock you see on Victory+:
+    </div>
+    <div class="delay-row">
+      <input type="text" class="delay-input" id="clockInput"
+        placeholder="MM:SS" maxlength="5"
+        oninput="formatClockInput(this)"
+        inputmode="numeric" />
+      <button class="delay-btn" onclick="syncFromClock()">Sync</button>
+      <button class="delay-btn" style="background:transparent;border:1px solid var(--border2);color:var(--muted);" onclick="clearDelay()">Clear</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:5px;font-family:'Barlow',sans-serif;" id="apiClock">App clock: waiting for game...</div>
+  </div>
+
+    <div class="controls">
     <button class="btn btn-primary" id="startBtn" onclick="startWatching()">Watch Game</button>
     <button class="btn btn-stop" id="stopBtn" onclick="stopWatching()" style="display:none">Stop</button>
     <button class="btn btn-test" onclick="testHorn()">Test Horn</button>
@@ -1098,6 +1204,7 @@
     <div class="penalty-detail" id="penaltyDetail">—</div>
   </div>
 
+
   <div class="log-card" id="logCard">
     <div class="log-label"><span class="polling-ring idle" id="pollingRing"></span>Activity Log</div>
     <div class="log-entry" id="log1">Ready. Tap "Watch Game" to begin.</div>
@@ -1109,6 +1216,37 @@
 
 <script>
 let pollInterval = null;
+let clockInterval = null;
+
+async function pollClock() {
+  try {
+    const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard');
+    const data = await r.json();
+    const events = data.events || [];
+    const game = events.find(e => {
+      const comps = e.competitions[0];
+      return comps.competitors.some(c => c.team.abbreviation === 'ANA');
+    });
+    if (!game) return;
+    const status = game.status;
+    const clock = status.displayClock || '';
+    const period = status.period || 1;
+    if (clock) {
+      const apiClockEl = document.getElementById('apiClock');
+      if (apiClockEl) apiClockEl.textContent = `API showing: P${period} ${clock}`;
+      const parts = clock.split(':');
+      if (parts.length === 2) {
+        currentApiClockSecs = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+      }
+      // Also update period pill with latest clock
+      const periodEl = document.getElementById('periodInfo');
+      if (periodEl && status.type.state === 'in') {
+        const pLabel = period > 3 ? 'OT' : `Period ${period}`;
+        periodEl.textContent = `${pLabel} · ${clock}`;
+      }
+    }
+  } catch(e) {}
+}
 let lastDucksScore = null;
 let audioCtx = null;
 let isRunning = false;
@@ -1177,23 +1315,184 @@ function addLog(msg, isGoal = false, isError = false) {
 }
 
 async function fetchGameData() {
-  const today = new Date().toISOString().slice(0, 10);
-  const r = await fetch(`https://api-web.nhle.com/v1/score/${today}`);
-  const data = await r.json();
-  return data.games || [];
+  // ESPN scoreboard — no date/timezone issues, always returns today's games
+  try {
+    const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard');
+    const data = await r.json();
+    const events = data.events || [];
+    // Convert ESPN format to match our existing code structure
+    return events.map(e => {
+      const comps = e.competitions[0];
+      const home = comps.competitors.find(c => c.homeAway === 'home');
+      const away = comps.competitors.find(c => c.homeAway === 'away');
+      const status = e.status;
+      return {
+        id: e.id,
+        gameState: status.type.state === 'in' ? (status.type.description === 'Halftime' || status.type.description?.includes('End') ? 'CRIT' : 'LIVE') :
+                   status.type.state === 'post' ? 'FINAL' :
+                   status.type.state === 'pre' ? 'FUT' : 'FUT',
+        startTimeUTC: e.date,
+        homeTeam: {
+          abbrev: home.team.abbreviation,
+          score: parseInt(home.score || 0),
+          id: home.team.id
+        },
+        awayTeam: {
+          abbrev: away.team.abbreviation,
+          score: parseInt(away.score || 0),
+          id: away.team.id
+        },
+        periodDescriptor: {
+          number: status.period || 1,
+          periodType: status.period > 3 ? 'OT' : 'REG',
+          inIntermission: status.type.description?.toLowerCase().includes('end') || status.type.description?.toLowerCase().includes('intermission') || false
+        },
+        statusDetail: status.type.detail || status.type.description || '',
+        displayClock: status.displayClock || '',
+        seriesStatus: e.series ? {
+          homeWins: e.series.competitors?.find(c=>c.homeAway==='home')?.wins || 0,
+          awayWins: e.series.competitors?.find(c=>c.homeAway==='away')?.wins || 0,
+          gameNumberOfSeries: e.series.gameNumber || ''
+        } : null,
+        _espnId: e.id
+      };
+    });
+  } catch(e) {
+    addLog(`ESPN API error: ${e.message}`, false, true);
+    return [];
+  }
 }
 
 async function fetchBoxscore(gameId) {
   try {
-    const r = await fetch(`https://api-web.nhle.com/v1/gamecenter/${gameId}/boxscore`);
-    return await r.json();
+    const r = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/summary?event=${gameId}`);
+    const data = await r.json();
+    if (!data.boxscore) return null;
+    const teams = data.boxscore.teams || [];
+
+    const getStatVal = (teamIdx, ...names) => {
+      const team = teams[teamIdx];
+      if (!team) return null;
+      for (const name of names) {
+        const stat = team.statistics?.find(s => s.name === name || s.abbreviation === name);
+        if (stat) return stat.displayValue;
+      }
+      return null;
+    };
+
+    // ESPN uses home team at index 0, away at index 1
+    // Power play: ESPN returns as decimal (0.0-1.0) or already as percentage — check and normalize
+    const ppHome = getStatVal(0, 'powerPlayPct', 'powerPlayPercentage', 'ppPct');
+    const ppAway = getStatVal(1, 'powerPlayPct', 'powerPlayPercentage', 'ppPct');
+
+    // If value > 1, it's already a percentage — divide by 100 to normalize
+    // If value <= 1, multiply by 100
+    const normPP = (val) => {
+      if (val == null) return null;
+      const n = parseFloat(val);
+      if (isNaN(n)) return null;
+      return n > 1 ? (n / 100).toString() : val;
+    };
+
+    return {
+      teamGameStats: [
+        { category: 'sog',
+          homeValue: getStatVal(0, 'shotsOnGoal', 'shots', 'SOG'),
+          awayValue: getStatVal(1, 'shotsOnGoal', 'shots', 'SOG') },
+        { category: 'faceoffWinningPctg',
+          homeValue: getStatVal(0, 'faceOffWinPercentage', 'faceoffsWon', 'faceOffPct', 'FOW%'),
+          awayValue: getStatVal(1, 'faceOffWinPercentage', 'faceoffsWon', 'faceOffPct', 'FOW%') },
+        { category: 'pim',
+          homeValue: getStatVal(0, 'penaltyMinutes', 'PIM'),
+          awayValue: getStatVal(1, 'penaltyMinutes', 'PIM') },
+        { category: 'blockedShots',
+          homeValue: getStatVal(0, 'blockedShots', 'blocks', 'BLK'),
+          awayValue: getStatVal(1, 'blockedShots', 'blocks', 'BLK') },
+        { category: 'powerPlayPctg',
+          homeValue: normPP(ppHome),
+          awayValue: normPP(ppAway) }
+      ],
+      homeTeam: { abbrev: teams[0]?.team?.abbreviation },
+      awayTeam: { abbrev: teams[1]?.team?.abbreviation },
+      clockSecs: (() => {
+        // Parse clock from status if available
+        const clock = data.header?.competitions?.[0]?.status?.displayClock;
+        if (!clock) return null;
+        const parts = clock.split(':');
+        if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        return null;
+      })()
+    };
   } catch(e) { return null; }
 }
 
 async function fetchPlayByPlay(gameId) {
   try {
-    const r = await fetch(`https://api-web.nhle.com/v1/gamecenter/${gameId}/play-by-play`);
-    return await r.json();
+    const r = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/hockey/nhl/summary?event=${gameId}`);
+    const data = await r.json();
+    if (!data.plays) return null;
+    // Convert ESPN plays to NHL API format for scorer detection
+    const comps = data.header?.competitions?.[0];
+    const home = comps?.competitors?.find(c => c.homeAway === 'home');
+    const away = comps?.competitors?.find(c => c.homeAway === 'away');
+    const goals = (data.scoringPlays || []).map(play => ({
+      typeDescKey: 'goal',
+      eventId: play.id,
+      timeInPeriod: play.clock?.displayValue || '',
+      periodDescriptor: { number: play.period?.number, periodType: play.period?.number > 3 ? 'OT' : 'REG' },
+      details: {
+        eventOwnerTeamId: play.team?.id,
+        scoringPlayerId: play.scoringPlay?.athlete?.id,
+        scoringPlayerTotal: play.scoringPlay?.athlete?.goals,
+        assist1PlayerId: play.scoringPlay?.assists?.[0]?.athlete?.id,
+        assist2PlayerId: play.scoringPlay?.assists?.[1]?.athlete?.id,
+        shotType: play.type?.text
+      }
+    }));
+    // ESPN embeds penalties in the main plays array with type.id === 'penalty' or similar
+    const allPlays = data.plays || [];
+    const penaltyKeywords = ['penalty', 'minor', 'major', 'misconduct', 'roughing', 'hooking',
+      'slashing', 'holding', 'tripping', 'interference', 'elbowing', 'charging', 'boarding'];
+    const penalties = allPlays
+      .filter(p => {
+        const t = (p.type?.text || p.type?.description || '').toLowerCase();
+        return penaltyKeywords.some(k => t.includes(k));
+      })
+      .map(play => {
+        const athlete = play.participants?.[0]?.athlete || play.athletes?.[0] || null;
+        const playerName = athlete?.displayName || athlete?.fullName ||
+          (athlete?.shortName) || null;
+        return {
+          typeDescKey: 'penalty',
+          eventId: play.id,
+          timeInPeriod: play.clock?.displayValue || '',
+          periodDescriptor: { number: play.period?.number },
+          playerName: playerName,
+          details: {
+            eventOwnerTeamId: play.team?.id,
+            committedByPlayerId: athlete?.id || null,
+            descKey: (play.type?.text || '').toLowerCase().replace(/\s+/g, '-'),
+            duration: play.penaltyMinutes || 2
+          }
+        };
+      });
+    // Build roster from ESPN athletes
+    const rosterSpots = [];
+    (data.rosters || []).forEach(teamRoster => {
+      (teamRoster.roster || []).forEach(player => {
+        rosterSpots.push({
+          playerId: player.athlete?.id,
+          firstName: { default: player.athlete?.displayName?.split(' ')[0] || '' },
+          lastName: { default: player.athlete?.displayName?.split(' ').slice(1).join(' ') || '' }
+        });
+      });
+    });
+    return {
+      plays: [...goals, ...penalties],
+      homeTeam: { id: home?.team?.id, abbrev: home?.team?.abbreviation },
+      awayTeam: { id: away?.team?.id, abbrev: away?.team?.abbreviation },
+      rosterSpots
+    };
   } catch(e) { return null; }
 }
 
@@ -1237,8 +1536,8 @@ function updateStats(boxscore, oppAbbr) {
   setBar('barSog', sogA, sogO);
 
   const foA = getVal('faceoffWinningPctg'), foO = getOpp('faceoffWinningPctg');
-  set('statFoAna', foA != null ? Math.round(parseFloat(foA)*100)+'%' : null);
-  set('statFoOpp', foO != null ? Math.round(parseFloat(foO)*100)+'%' : null);
+  set('statFoAna', foA != null ? Math.round(parseFloat(foA))+'%' : null);
+  set('statFoOpp', foO != null ? Math.round(parseFloat(foO))+'%' : null);
   setBar('barFo', foA, foO);
 
   const pimA = getVal('pim'), pimO = getOpp('pim');
@@ -1345,8 +1644,25 @@ function updateScoreDisplay(game) {
   if (state === 'LIVE' || state === 'CRIT') {
     statusEl.textContent = 'Live'; statusEl.className = 'game-status live';
     if (period) {
-      const pLabel = period.periodType === 'OT' ? 'OT' : period.periodType === 'SO' ? 'SO' : `Period ${period.number}`;
+      let pLabel = period.periodType === 'OT' ? 'OT' : period.periodType === 'SO' ? 'SO' : `Period ${period.number}`;
+      if (period.inIntermission) pLabel = `INT ${period.number}`;
+      else if (game.statusDetail?.toLowerCase().includes('end')) pLabel = `End P${period.number}`;
+      else if (game.statusDetail?.toLowerCase().includes('intermission')) pLabel = `INT`;
+      // Show game clock if available
+      if (game.displayClock && !period.inIntermission) {
+        pLabel += ` · ${game.displayClock}`;
+      }
       periodEl.textContent = pLabel;
+      // Update API clock display for sync
+      const apiClockEl = document.getElementById('apiClock');
+      if (apiClockEl && game.displayClock) {
+        apiClockEl.textContent = `API showing: P${period.number} ${game.displayClock}`;
+        // Store as seconds for sync calculation
+        const parts = game.displayClock.split(':');
+        if (parts.length === 2) {
+          currentApiClockSecs = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        }
+      }
     }
   } else if (state === 'FUT' || state === 'PRE') {
     const localTime = new Date(game.startTimeUTC).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
@@ -1370,6 +1686,7 @@ function updateScoreDisplay(game) {
   }
   const badge = document.getElementById('liveBadge');
   if (badge) badge.className = (state === 'LIVE' || state === 'CRIT') ? 'live-badge show' : 'live-badge';
+  showSyncBar(state === 'LIVE' || state === 'CRIT');
 
   // Series info for playoff games
   const seriesBadge = document.getElementById('seriesBadge');
@@ -1752,6 +2069,20 @@ function fireGoalAnimation() {
 }
 
 function triggerGoalAlert(pbp) {
+  if (streamDelayMs > 0) {
+    addLog(`Goal detected — firing in ${Math.round(streamDelayMs/1000)}s to match stream...`);
+    setTimeout(() => _fireGoalAlert(pbp), streamDelayMs);
+    return;
+  }
+  _fireGoalAlert(pbp);
+}
+
+function _fireGoalAlert(pbp) {
+  lastGoalDetectedAt = Date.now();
+  // Enable the "I See It Now" sync button
+  const btn = document.getElementById('seenItBtn');
+  if (btn) { btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+  document.getElementById('syncHint').textContent = 'Goal detected! Watch Victory+ and tap "I See It Now" the moment you see the goal on screen.';
   const banner = document.getElementById('goalBanner');
   const card = document.getElementById('scoreCard');
   banner.classList.add('show');
@@ -1816,15 +2147,35 @@ async function checkPenalties(gameId, pbp) {
   if (!penalties.length) return;
   const latest = penalties[penalties.length - 1];
   if (latest.eventId === lastPenaltyEventId) return;
+
+  // Lock-back: ignore penalties that happened more than 2 minutes ago
+  // Compare penalty time to current API clock — if difference > 120s, skip
+  if (currentApiClockSecs !== null && latest.timeInPeriod) {
+    const parts = latest.timeInPeriod.split(':');
+    if (parts.length === 2) {
+      const penaltyClockSecs = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+      // Hockey clock counts down — penalty happened earlier = higher clock value
+      const elapsed = penaltyClockSecs - currentApiClockSecs;
+      if (elapsed > 120) {
+        lastPenaltyEventId = latest.eventId; // mark as seen so we don't recheck
+        return;
+      }
+    }
+  }
+
   lastPenaltyEventId = latest.eventId;
 
   const d = latest.details || {};
-  const roster = pbp.rosterSpots || [];
+  // Use playerName stored directly on play (ESPN provides it)
+  // Fall back to roster lookup for NHL API compatibility
   const findPlayer = (id) => {
     if (!id) return null;
+    const roster = pbp.rosterSpots || [];
     const p = roster.find(r => r.playerId === id);
     return p ? `${p.firstName?.default || ''} ${p.lastName?.default || ''}`.trim() : null;
   };
+
+  const player = latest.playerName || findPlayer(d.committedByPlayerId) || findPlayer(d.servedByPlayerId) || 'Unknown';
 
   const isAnaAway = pbp.awayTeam?.abbrev === 'ANA';
   const anaTeamId = isAnaAway ? pbp.awayTeam?.id : pbp.homeTeam?.id;
@@ -1832,7 +2183,7 @@ async function checkPenalties(gameId, pbp) {
   const teamAbbr = penalizedTeamId === anaTeamId ? 'ANA' :
     (isAnaAway ? pbp.homeTeam?.abbrev : pbp.awayTeam?.abbrev) || 'OPP';
 
-  const player = findPlayer(d.committedByPlayerId) || findPlayer(d.servedByPlayerId) || 'Unknown';
+
   const type = d.descKey ? d.descKey.replace(/-/g,' ') : 'Penalty';
   const duration = d.duration || 2;
   const period = latest.periodDescriptor?.number ? `P${latest.periodDescriptor.number}` : '';
@@ -1840,6 +2191,13 @@ async function checkPenalties(gameId, pbp) {
 
   addLog(`Penalty: ${player} (${teamAbbr}) — ${type} ${duration}min`);
   showPenaltyToast(player, type.charAt(0).toUpperCase()+type.slice(1), duration, teamAbbr, period, time);
+}
+
+let streamDelayMs = 0;
+let lastKnownApiTime = null; // time in seconds from API during last poll
+
+
+function showSyncBar(show) {
 }
 
 async function poll() {
@@ -1860,12 +2218,24 @@ async function poll() {
 
     // Fetch boxscore for live stats
     const boxscore = await fetchBoxscore(ducksGame.id);
-    if (boxscore) updateStats(boxscore, ducksGame.awayTeam.abbrev === 'ANA' ? ducksGame.homeTeam.abbrev : ducksGame.awayTeam.abbrev);
+    if (boxscore) {
+      updateStats(boxscore, ducksGame.awayTeam.abbrev === 'ANA' ? ducksGame.homeTeam.abbrev : ducksGame.awayTeam.abbrev);
+      // Store current API clock for stream sync
+      if (boxscore.clockSecs != null) lastKnownApiTime = boxscore.clockSecs;
+    }
 
     // Check for new penalties
     if (ducksGame.gameState === 'LIVE' || ducksGame.gameState === 'CRIT') {
       const penPbp = await fetchPlayByPlay(ducksGame.id);
-      if (penPbp) checkPenalties(ducksGame.id, penPbp);
+      if (penPbp) {
+        // If this is first poll, seed penalty ID without firing toast
+        if (lastPenaltyEventId === null) {
+          const pens = (penPbp.plays || []).filter(p => p.typeDescKey === 'penalty');
+          if (pens.length) lastPenaltyEventId = pens[pens.length - 1].eventId;
+        } else {
+          checkPenalties(ducksGame.id, penPbp);
+        }
+      }
     }
 
     // Explicitly track ANA score only — never trigger on opponent goals
@@ -1878,6 +2248,14 @@ async function poll() {
     if (lastDucksScore === null) {
       lastDucksScore = currentScore;
       lastOppScore = oppScore;
+      // Silently seed penalty ID on start to suppress stale penalties
+      try {
+        const initPbp = await fetchPlayByPlay(ducksGame.id);
+        if (initPbp) {
+          const pens = (initPbp.plays || []).filter(p => p.typeDescKey === 'penalty');
+          if (pens.length) lastPenaltyEventId = pens[pens.length - 1].eventId;
+        }
+      } catch(e) {}
       addLog(`Tracking: ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore}`);
     } else if (currentScore > lastDucksScore) {
       // ANA score went up — confirmed Ducks goal
@@ -1918,12 +2296,67 @@ function startWatching() {
   addLog('Started watching — checking every 10 seconds');
   poll();
   pollInterval = setInterval(poll, 10000);
+  // Fast clock poll every 3 seconds for sync accuracy
+  clockInterval = setInterval(pollClock, 3000);
   if ('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(() => {});
 }
 
+let lastGoalDetectedAt = null;
+
+let currentApiClockSecs = null;
+
+function formatClockInput(el) {
+  let v = el.value.replace(/[^0-9]/g, '');
+  if (v.length > 4) v = v.slice(0, 4);
+  if (v.length > 2) v = v.slice(0, 2) + ':' + v.slice(2);
+  el.value = v;
+}
+
+function syncFromClock() {
+  const input = document.getElementById('clockInput').value.trim();
+  if (!input.match(/^\d{1,2}:\d{2}$/)) {
+    addLog('Enter a valid clock e.g. 14:32', false, true);
+    return;
+  }
+  if (currentApiClockSecs === null) {
+    addLog('No API clock yet — wait for game to start', false, true);
+    return;
+  }
+
+  // Parse TV clock
+  const [min, sec] = input.split(':').map(Number);
+  const tvClockSecs = min * 60 + sec;
+
+  // Hockey clock counts DOWN — higher number = earlier in period = TV is behind
+  // e.g. API shows 19:08, TV shows 19:35 → TV is 27s behind the API
+  // delay = tvClockSecs - apiClockSecs (TV shows more time remaining = TV is behind)
+  const delaySecs = tvClockSecs - currentApiClockSecs;
+
+  if (delaySecs <= 0) {
+    addLog('TV is ahead of or in sync with API — no delay needed');
+    streamDelayMs = 0;
+    document.getElementById('delayDisplay').textContent = 'No delay needed';
+  } else {
+    streamDelayMs = delaySecs * 1000;
+    document.getElementById('delayDisplay').textContent = delaySecs + 's delay';
+    addLog('Stream sync set — ' + delaySecs + 's delay going forward');
+  }
+  document.getElementById('clockInput').value = '';
+}
+
+function clearDelay() {
+  streamDelayMs = 0;
+  document.getElementById('delayDisplay').textContent = 'No delay set';
+  document.getElementById('clockInput').value = '';
+  addLog('Stream delay cleared');
+}
+
+
 function stopWatching() {
   isRunning = false;
-  clearInterval(pollInterval); pollInterval = null; lastDucksScore = null;
+  clearInterval(pollInterval); pollInterval = null;
+  clearInterval(clockInterval); clockInterval = null;
+  lastDucksScore = null;
   document.getElementById('startBtn').style.display = 'flex';
   document.getElementById('stopBtn').style.display = 'none';
   document.getElementById('pollingRing').className = 'polling-ring idle';

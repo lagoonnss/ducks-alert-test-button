@@ -999,6 +999,89 @@
     letter-spacing: 0.03em;
     line-height: 1.5;
   }
+
+  /* ── LANDSCAPE / IPAD MINI OPTIMIZATION ── */
+  @media (orientation: landscape) and (max-height: 600px) {
+    body {
+      padding-bottom: 1rem;
+    }
+
+    header {
+      padding: 0.5rem 1rem;
+    }
+
+    .duck-logo { width: 36px; height: 36px; }
+    .title-block h1 { font-size: 18px; }
+    .title-block p { font-size: 8px; }
+    .series-record { font-size: 16px; }
+    .series-label { font-size: 8px; }
+
+    .main {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.75rem 0.75rem 0;
+      max-width: 100%;
+    }
+
+    /* Left column: scoreboard + sync + controls */
+    .left-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      width: 240px;
+      flex-shrink: 0;
+    }
+
+    /* Right column: stats + log */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .scoreboard {
+      padding: 0.5rem 0.75rem 0.6rem;
+    }
+
+    .team-score { font-size: 48px; }
+    .team-abbr { font-size: 16px; }
+
+    .scoreboard-top { padding-top: 0; }
+
+    .stats-card { display: flex !important; flex-direction: column; }
+
+    .stat-row { padding: 0.35rem 0.75rem; }
+    .stat-name { font-size: 10px; }
+    .sv { font-size: 13px; }
+
+    .delay-card { padding: 0.6rem 0.75rem; }
+    .delay-label { font-size: 9px; }
+    .delay-value { font-size: 12px; }
+    .delay-input { font-size: 16px; padding: 4px 6px; }
+    .delay-btn { padding: 4px 8px; font-size: 10px; }
+
+    .btn-honk { padding: 0.8rem; }
+    .honk-label { font-size: 22px; }
+    .honk-sub { font-size: 9px; }
+
+    .btn { padding: 0.6rem 0.5rem; font-size: 12px; }
+    .btn-kill { padding: 0.6rem; font-size: 11px; }
+
+    .log-card { flex: 1; padding: 0.6rem 0.75rem; }
+    .log-label { font-size: 9px; }
+    .log-entry { font-size: 10px; }
+
+    .audio-notice { font-size: 11px; padding: 0.5rem 0.75rem; }
+
+    /* Hide goal banner in landscape — popup handles it */
+    .goal-banner { display: none; }
+
+    /* Penalty toast sits higher in landscape */
+    .penalty-toast { bottom: 16px; }
+  }
 </style>
 
 </head>
@@ -1058,6 +1141,8 @@
     <div class="goal-sub">Anaheim Ducks score</div>
   </div>
 
+  </div>
+  <div class="right-col" id="rightCol">
   <div class="stats-card" id="statsCard" style="display:none">
     <div class="stats-header">
       <div class="stats-header-label">Game Stats</div>
@@ -1212,6 +1297,7 @@
     <div class="log-entry" id="log3"></div>
   </div>
 
+  </div>
 </div>
 
 <script>

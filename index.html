@@ -1021,6 +1021,106 @@
     letter-spacing: 0.03em;
     line-height: 1.5;
   }
+
+  /* ── VICTORY+ CLOCK ── */
+  .vp-clock-card {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+  }
+
+  .vp-clock-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+
+  .vp-clock-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .vp-clock-status {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .vp-clock-status.running { color: var(--green); }
+  .vp-clock-status.stopped { color: #f87171; }
+
+  .vp-clock-display {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 52px;
+    color: var(--text);
+    letter-spacing: 0.06em;
+    text-align: center;
+    line-height: 1;
+    margin-bottom: 0.6rem;
+  }
+
+  .vp-clock-display.running { color: var(--orange); }
+  .vp-clock-display.stopped { color: rgba(255,255,255,0.3); }
+
+  .vp-clock-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .vp-adj-btn {
+    background: var(--card2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .vp-start-btn {
+    flex: 1;
+    background: var(--orange);
+    border: none;
+    border-radius: 8px;
+    color: var(--black);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.6rem;
+    cursor: pointer;
+  }
+
+  .vp-delay-display {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 5px;
+    letter-spacing: 0.06em;
+  }
+
+  .vp-delay-display span { color: var(--orange); font-weight: 700; }
 </style>
 
 </head>
@@ -1181,41 +1281,46 @@
     </div>
   </div>
 
-<div class="delay-card">
-    <div class="delay-header">
-      <div class="delay-label">Stream Sync</div>
-      <div class="delay-value" id="delayDisplay">No delay set</div>
+<div class="vp-clock-card">
+    <div class="vp-clock-header">
+      <div class="vp-clock-label">Victory+ Clock</div>
+      <div class="vp-clock-status" id="vpClockStatus">Not started</div>
     </div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;letter-spacing:0.04em;font-family:'Barlow',sans-serif;">
-      During a stoppage, type the clock you see on Victory+:
+    <div class="vp-clock-display" id="vpClockDisplay">19:59</div>
+    <div class="vp-clock-row">
+      <button class="vp-adj-btn" onclick="adjustVpDelay(-1)" title="1s earlier">−</button>
+      <button class="vp-adj-btn" onclick="adjustVpDelay(-5)" title="5s earlier">−−</button>
+      <button class="vp-start-btn" id="vpStartBtn" onclick="vpPeriodStart()">▶ Period Start</button>
+      <button class="vp-adj-btn" onclick="adjustVpDelay(5)" title="5s later">++</button>
+      <button class="vp-adj-btn" onclick="adjustVpDelay(1)" title="1s later">+</button>
     </div>
-    <div class="delay-row">
-      <input type="text" class="delay-input" id="clockInput"
-        placeholder="MM:SS" maxlength="5"
-        oninput="formatClockInput(this)"
-        inputmode="numeric" />
-      <button class="delay-btn" onclick="syncFromClock()">Sync</button>
-      <button class="delay-btn" style="background:transparent;border:1px solid var(--border2);color:var(--muted);" onclick="clearDelay()">Clear</button>
-    </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:5px;font-family:'Barlow',sans-serif;" id="apiClock">App clock: waiting for game...</div>
+    <div class="vp-delay-display" id="vpDelayDisplay">Delay: <span id="delayDisplay">not set</span> &nbsp;|&nbsp; App clock: <span id="apiClock">waiting...</span></div>
   </div>
 
-    <div class="controls">
+    <div class="controls" style="flex-wrap:wrap;gap:6px;">
     <button class="btn btn-primary" id="startBtn" onclick="startWatching()">Watch Game</button>
     <button class="btn btn-stop" id="stopBtn" onclick="stopWatching()" style="display:none">Stop</button>
+    <button class="btn btn-test" onclick="manualHorn()" style="border-color:rgba(244,122,56,0.5);color:#F47A38;">Goal!</button>
     <button class="btn btn-test" onclick="testHorn()">Test Horn</button>
     <button class="btn btn-test" onclick="testOppGoal()" style="border-color:rgba(255,255,255,0.2);color:rgba(255,255,255,0.5);">Test Opp</button>
     <button class="btn btn-test" onclick="testWin()" style="border-color:rgba(244,122,56,0.5);color:#F47A38;">Test Win</button>
     <button class="btn btn-test" onclick="testLoss()" style="border-color:rgba(255,255,255,0.12);color:rgba(255,255,255,0.3);">Test Loss</button>
     <button class="btn btn-test" onclick="testPenaltyToast()" style="border-color:rgba(250,204,21,0.4);color:#facc15;">Test Pen</button>
+    <button class="btn btn-test" onclick="downloadGameLog()" style="border-color:rgba(100,200,100,0.4);color:#4ade80;">↓ Log</button>
   </div>
 
   <button class="btn btn-kill" onclick="killSound()" title="Kill all sound" style="width:100%;margin-top:-0.25rem;">&#9646;&#9646; Kill Audio</button>
 
-  <button class="btn-honk" onclick="manualHorn()">
-    <span class="honk-label">Goal!</span>
-    <span class="honk-sub">tap when you see it</span>
-  </button>
+  <div style="display:flex;gap:8px;width:100%;">
+    <button class="btn-honk" onclick="logTvGoal('ANA')" style="background:#F47A38;">
+      <span class="honk-label" style="font-size:22px;">ANA GOAL</span>
+      <span class="honk-sub">tap when you see it on TV</span>
+    </button>
+    <button class="btn-honk" onclick="logTvGoal('OPP')" style="background:#1c1f24;border:2px solid rgba(255,255,255,0.15);">
+      <span class="honk-label" style="font-size:22px;color:rgba(255,255,255,0.5);">OPP GOAL</span>
+      <span class="honk-sub">tap when you see it on TV</span>
+    </button>
+  </div>
 
   <div class="penalty-toast" id="penaltyToast">
     <div class="penalty-toast-top">
@@ -1255,10 +1360,11 @@ async function pollClock() {
     const period = status.period || 1;
     if (clock) {
       const apiClockEl = document.getElementById('apiClock');
-      if (apiClockEl) apiClockEl.textContent = `API showing: P${period} ${clock}`;
+      if (apiClockEl) apiClockEl.textContent = `P${period} ${clock}`;
       const parts = clock.split(':');
       if (parts.length === 2) {
         currentApiClockSecs = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        updateVpClockFromApi(currentApiClockSecs);
       }
       // Also update period pill with latest clock
       const periodEl = document.getElementById('periodInfo');
@@ -1319,6 +1425,41 @@ function killSound() {
   stopGoalSong();
   if (audioCtx) { audioCtx.close(); audioCtx = null; hornBuffer = null; goalSongBuffer = null; }
   addLog('Sound killed.');
+}
+
+// ── GAME DATA LOGGING ──
+const gameLog = [];
+
+function gameLogEntry(type, data = {}) {
+  const entry = {
+    t: Date.now(),
+    type,
+    vpClock: vpFmt(vpClockSecs),
+    apiClock: currentApiClockSecs !== null ? vpFmt(currentApiClockSecs) : 'N/A',
+    delaySecs: Math.round(vpClockSecs - (currentApiClockSecs || 0)),
+    streamDelayMs,
+    ...data
+  };
+  gameLog.push(entry);
+  return entry;
+}
+
+function logTvGoal(team) {
+  const entry = gameLogEntry('TV_GOAL', { team });
+  addLog(`📺 TV Goal logged: ${team} · VP:${entry.vpClock} API:${entry.apiClock} Δ${entry.delaySecs}s`);
+}
+
+function downloadGameLog() {
+  if (!gameLog.length) { addLog('No data logged yet'); return; }
+  const json = JSON.stringify(gameLog, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ducks-game-log-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  addLog(`Log downloaded — ${gameLog.length} events`);
 }
 
 function testHorn() { addLog('Testing foghorn...'); playFoghorn(); }
@@ -2301,6 +2442,7 @@ async function poll() {
     } else if (currentScore > lastDucksScore) {
       // ANA score went up — confirmed Ducks goal
       addLog(`GOAL! ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore}`, true);
+      gameLogEntry('API_GOAL', { team: 'ANA', score: currentScore });
       const pbp = await fetchPlayByPlay(ducksGame.id);
       triggerGoalAlert(pbp);
       lastDucksScore = currentScore;
@@ -2311,6 +2453,7 @@ async function poll() {
       // Check if opponent scored
       if (lastOppScore !== null && oppScore > lastOppScore) {
         addLog(`${oppTeam.abbrev} goal. ${oppTeam.abbrev} ${oppScore} — ANA ${currentScore}`);
+        gameLogEntry('API_GOAL', { team: oppTeam.abbrev, score: oppScore });
         const oppPbp = await fetchPlayByPlay(ducksGame.id);
         showAngryPopup(oppTeam.abbrev, oppScore, oppPbp);
         lastOppScore = oppScore;
@@ -2346,50 +2489,98 @@ let lastGoalDetectedAt = null;
 
 let currentApiClockSecs = null;
 
-function formatClockInput(el) {
-  let v = el.value.replace(/[^0-9]/g, '');
-  if (v.length > 4) v = v.slice(0, 4);
-  if (v.length > 2) v = v.slice(0, 2) + ':' + v.slice(2);
-  el.value = v;
+// ── VICTORY+ CLOCK ──
+let vpClockSecs = 19 * 60 + 59;   // 19:59
+let vpClockRunning = false;
+let vpClockInterval = null;
+let vpManualOffsetSecs = 0;        // manual fine-tune adjustment
+let lastApiClockSecs = null;       // to detect stoppages
+let lastApiClockTime = null;       // when we last saw the API clock change
+
+function vpFmt(secs) {
+  const s = Math.max(0, Math.round(secs));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 }
 
-function syncFromClock() {
-  const input = document.getElementById('clockInput').value.trim();
-  if (!input.match(/^\d{1,2}:\d{2}$/)) {
-    addLog('Enter a valid clock e.g. 14:32', false, true);
-    return;
+function vpUpdateDisplay() {
+  const disp = document.getElementById('vpClockDisplay');
+  const status = document.getElementById('vpClockStatus');
+  if (disp) {
+    disp.textContent = vpFmt(vpClockSecs);
+    disp.className = 'vp-clock-display ' + (vpClockRunning ? 'running' : 'stopped');
   }
-  if (currentApiClockSecs === null) {
-    addLog('No API clock yet — wait for game to start', false, true);
-    return;
+  if (status) {
+    status.textContent = vpClockRunning ? 'Running' : (vpClockSecs < 19*60+59 ? 'Stopped' : 'Not started');
+    status.className = 'vp-clock-status ' + (vpClockRunning ? 'running' : 'stopped');
   }
+  // Update delay display
+  const delaySecs = Math.round(vpClockSecs - (currentApiClockSecs || 0));
+  const delayEl = document.getElementById('delayDisplay');
+  if (delayEl && currentApiClockSecs !== null && vpClockSecs < 19*60+59) {
+    streamDelayMs = Math.max(0, delaySecs) * 1000;
+    delayEl.textContent = Math.max(0, delaySecs) + 's';
+  }
+}
 
-  // Parse TV clock
-  const [min, sec] = input.split(':').map(Number);
-  const tvClockSecs = min * 60 + sec;
+function vpPeriodStart() {
+  vpClockSecs = 19 * 60 + 59;
+  vpManualOffsetSecs = 0;
+  vpClockRunning = true;
+  if (vpClockInterval) clearInterval(vpClockInterval);
+  vpClockInterval = setInterval(() => {
+    if (vpClockRunning) {
+      vpClockSecs -= 1;
+      if (vpClockSecs <= 0) { vpClockSecs = 0; vpClockRunning = false; clearInterval(vpClockInterval); }
+    }
+    vpUpdateDisplay();
+  }, 1000);
+  addLog('Victory+ clock started — 19:59');
+  gameLogEntry('PERIOD_START');
+  vpUpdateDisplay();
+}
 
-  // Hockey clock counts DOWN — higher number = earlier in period = TV is behind
-  // e.g. API shows 19:08, TV shows 19:35 → TV is 27s behind the API
-  // delay = tvClockSecs - apiClockSecs (TV shows more time remaining = TV is behind)
-  const delaySecs = tvClockSecs - currentApiClockSecs;
+function adjustVpDelay(secs) {
+  vpManualOffsetSecs += secs;
+  vpClockSecs += secs;
+  vpClockSecs = Math.max(0, Math.min(19*60+59, vpClockSecs));
+  addLog('VP clock adjusted ' + (secs > 0 ? '+' : '') + secs + 's → ' + vpFmt(vpClockSecs));
+  gameLogEntry('MANUAL_ADJUST', { adjustSecs: secs });
+  vpUpdateDisplay();
+}
 
-  if (delaySecs <= 0) {
-    addLog('TV is ahead of or in sync with API — no delay needed');
-    streamDelayMs = 0;
-    document.getElementById('delayDisplay').textContent = 'No delay needed';
+// Called from pollClock to sync stoppage detection
+function updateVpClockFromApi(apiSecs) {
+  if (!vpClockRunning) return;
+  // Detect stoppage: if API clock hasn't changed in 6s, pause VP clock
+  const now = Date.now();
+  if (lastApiClockSecs !== null && lastApiClockSecs === apiSecs) {
+    if (lastApiClockTime && (now - lastApiClockTime) > 6000) {
+      vpClockRunning = false;
+      addLog('Stoppage detected — VP clock paused');
+      gameLogEntry('STOPPAGE');
+      vpUpdateDisplay();
+    }
   } else {
-    streamDelayMs = delaySecs * 1000;
-    document.getElementById('delayDisplay').textContent = delaySecs + 's delay';
-    addLog('Stream sync set — ' + delaySecs + 's delay going forward');
+    // API clock moved — resume if paused
+    if (!vpClockRunning && vpClockSecs < 19*60+59) {
+      vpClockRunning = true;
+      addLog('Play resumed — VP clock running');
+    }
+    lastApiClockSecs = apiSecs;
+    lastApiClockTime = now;
   }
-  document.getElementById('clockInput').value = '';
 }
 
 function clearDelay() {
   streamDelayMs = 0;
-  document.getElementById('delayDisplay').textContent = 'No delay set';
-  document.getElementById('clockInput').value = '';
+  vpClockSecs = 19 * 60 + 59;
+  vpClockRunning = false;
+  vpManualOffsetSecs = 0;
+  if (vpClockInterval) { clearInterval(vpClockInterval); vpClockInterval = null; }
+  const delayEl = document.getElementById('delayDisplay');
+  if (delayEl) delayEl.textContent = 'not set';
   addLog('Stream delay cleared');
+  vpUpdateDisplay();
 }
 
 

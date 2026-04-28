@@ -2644,11 +2644,11 @@ function startWatching() {
   document.getElementById('stopBtn').style.display = 'flex';
   document.getElementById('pollingRing').className = 'polling-ring';
   document.getElementById('audioNotice').style.display = 'none';
-  addLog('Started watching — checking every 10 seconds');
+  addLog('Started watching — checking every 0.5 seconds');
   poll();
-  pollInterval = setInterval(poll, 10000);
+  pollInterval = setInterval(poll, 500);
   // Fast clock poll every 3 seconds for sync accuracy
-  clockInterval = setInterval(pollClock, 3000);
+  clockInterval = setInterval(pollClock, 500);
   if ('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(() => {});
 }
 

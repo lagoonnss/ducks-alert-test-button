@@ -2701,7 +2701,9 @@ function vpUpdateDisplay() {
     status.className = 'vp-clock-status ' + (vpClockRunning ? 'running' : 'stopped');
   }
   // Update delay display
-  const delaySecs = Math.round(vpClockSecs - (currentApiClockSecs || 0));
+  const apiForDelay = window._vpApiClockFrozen !== undefined && window._vpApiClockFrozen !== null
+    ? window._vpApiClockFrozen : (currentApiClockSecs || 0);
+  const delaySecs = Math.round(vpClockSecs - apiForDelay);
   const delayEl = document.getElementById('delayDisplay');
   if (delayEl && currentApiClockSecs !== null && vpClockSecs < 19*60+59) {
     streamDelayMs = Math.max(0, delaySecs) * 1000;
@@ -2781,12 +2783,14 @@ let stoppageStartApiSecs = null;
 let stoppageStartTime = null;
 
 function vpManualPause() {
-  // Log whistle moment — VP clock keeps running as reference
+  // Pause VP clock AND freeze API clock used for delay calculation
+  vpClockRunning = false;
+  window._vpApiClockFrozen = currentApiClockSecs; // freeze API clock at whistle
   stoppageStartVpSecs = vpClockSecs;
   stoppageStartApiSecs = currentApiClockSecs;
   stoppageStartTime = Date.now();
 
-  const entry = gameLogEntry('WHISTLE', {
+  gameLogEntry('WHISTLE', {
     vpClock: vpFmt(vpClockSecs),
     apiClock: currentApiClockSecs !== null ? vpFmt(currentApiClockSecs) : 'N/A',
     delaySecs: Math.round(vpClockSecs - (currentApiClockSecs || 0))
@@ -2795,11 +2799,14 @@ function vpManualPause() {
   // Swap buttons
   document.getElementById('vpPauseBtn').style.display = 'none';
   document.getElementById('vpResumeBtn').style.display = 'flex';
-  addLog('⏸ Whistle logged — VP:' + vpFmt(vpClockSecs) + ' API:' + (currentApiClockSecs !== null ? vpFmt(currentApiClockSecs) : 'N/A'));
+  vpUpdateDisplay();
+  addLog('⏸ Whistle — VP clock paused at ' + vpFmt(vpClockSecs));
 }
 
 function vpManualResume() {
-  // Log puck drop moment — calculate stoppage duration on both streams
+  // Resume VP clock and unfreeze API clock
+  vpClockRunning = true;
+  window._vpApiClockFrozen = null;
   const now = Date.now();
   const realElapsed = stoppageStartTime ? Math.round((now - stoppageStartTime) / 1000) : null;
   const vpElapsed = stoppageStartVpSecs !== null ? Math.round(stoppageStartVpSecs - vpClockSecs) : null;

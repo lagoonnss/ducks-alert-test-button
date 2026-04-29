@@ -2574,8 +2574,9 @@ async function poll() {
 
     updateScoreDisplay(ducksGame);
 
-    // Fetch boxscore for live stats
-    const boxscore = await fetchBoxscore(ducksGame.id);
+    // Fetch boxscore for live stats — only when game is active
+    const isActive = ['LIVE', 'CRIT', 'FINAL'].includes(ducksGame.gameState);
+    const boxscore = isActive ? await fetchBoxscore(ducksGame.id) : null;
     if (boxscore) {
       updateStats(boxscore, ducksGame.awayTeam.abbrev === 'ANA' ? ducksGame.homeTeam.abbrev : ducksGame.awayTeam.abbrev);
       // Store current API clock for stream sync
@@ -2727,21 +2728,25 @@ function adjustVpDelay(secs) {
 
 // Called from pollClock to sync stoppage detection
 function updateVpClockFromApi(apiSecs) {
-  if (!vpClockRunning) return;
-  // Detect stoppage: if API clock hasn't changed in 6s, pause VP clock
+  // Don't run before period start
+  if (vpClockSecs >= 19*60+59 && !vpClockRunning) return;
   const now = Date.now();
+
   if (lastApiClockSecs !== null && lastApiClockSecs === apiSecs) {
-    if (lastApiClockTime && (now - lastApiClockTime) > 6000) {
+    // API clock unchanged — check stoppage threshold (8s to avoid false positives)
+    if (vpClockRunning && lastApiClockTime && (now - lastApiClockTime) > 8000) {
       vpClockRunning = false;
       addLog('Stoppage detected — VP clock paused');
       gameLogEntry('STOPPAGE');
       vpUpdateDisplay();
     }
   } else {
-    // API clock moved — resume if paused
-    if (!vpClockRunning && vpClockSecs < 19*60+59) {
+    // API clock moved — resume VP clock if stopped mid-period
+    if (!vpClockRunning && vpClockSecs < 19*60+59 && vpClockSecs > 0) {
       vpClockRunning = true;
       addLog('Play resumed — VP clock running');
+      gameLogEntry('RESUME');
+      vpUpdateDisplay();
     }
     lastApiClockSecs = apiSecs;
     lastApiClockTime = now;

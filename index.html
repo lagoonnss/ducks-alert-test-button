@@ -1454,6 +1454,16 @@
       <button class="vp-adj-btn" onclick="adjustVpDelay(1)" title="1s later">+1</button>
       <button class="vp-adj-btn" onclick="adjustVpDelay(5)" title="5s later">+5</button>
     </div>
+    <div class="vp-clock-row" id="vpStopResumeRow" style="display:none;margin-top:6px;">
+      <button class="vp-start-btn" id="vpPauseBtn" onclick="vpManualPause()"
+        style="background:#1c1f24;border:1px solid rgba(255,255,255,0.2);color:var(--muted);flex:1;">
+        ⏸ Whistle
+      </button>
+      <button class="vp-start-btn" id="vpResumeBtn" onclick="vpManualResume()"
+        style="background:#1c1f24;border:1px solid rgba(34,197,94,0.4);color:#22c55e;flex:1;display:none;">
+        ▶ Puck Drop
+      </button>
+    </div>
     <div class="vp-delay-display" id="vpDelayDisplay">Delay: <span id="delayDisplay">not set</span> &nbsp;|&nbsp; App clock: <span id="apiClock">waiting...</span></div>
     <div id="vpManualSyncRow" style="display:none;margin-top:8px;">
       <div style="font-size:11px;color:var(--muted);margin-bottom:5px;font-family:'Barlow',sans-serif;">
@@ -2709,9 +2719,12 @@ function vpPeriodStart() {
     }
     vpUpdateDisplay();
   }, 1000);
+  // Auto-start watching if not already running
+  if (!isRunning) startWatching();
   addLog('Victory+ clock started — 19:59');
   gameLogEntry('PERIOD_START');
   document.getElementById('vpManualSyncRow').style.display = 'block';
+  document.getElementById('vpStopResumeRow').style.display = 'flex';
   vpUpdateDisplay();
 }
 
@@ -2760,33 +2773,55 @@ function applyManualVpClock() {
   vpUpdateDisplay();
 }
 
-let lastApiClockSecs = null;
-let lastApiClockTime = null;
+// Manual stoppage logging — no auto-detection
+let stoppageStartVpSecs = null;
+let stoppageStartApiSecs = null;
+let stoppageStartTime = null;
 
-function updateVpClockFromApi(apiSecs) {
-  // Only run after period has been started
-  if (vpClockSecs >= 19*60+59 && !vpClockRunning) return;
+function vpManualPause() {
+  // Log whistle moment — VP clock keeps running as reference
+  stoppageStartVpSecs = vpClockSecs;
+  stoppageStartApiSecs = currentApiClockSecs;
+  stoppageStartTime = Date.now();
+
+  const entry = gameLogEntry('WHISTLE', {
+    vpClock: vpFmt(vpClockSecs),
+    apiClock: currentApiClockSecs !== null ? vpFmt(currentApiClockSecs) : 'N/A',
+    delaySecs: Math.round(vpClockSecs - (currentApiClockSecs || 0))
+  });
+
+  // Swap buttons
+  document.getElementById('vpPauseBtn').style.display = 'none';
+  document.getElementById('vpResumeBtn').style.display = 'flex';
+  addLog('⏸ Whistle logged — VP:' + vpFmt(vpClockSecs) + ' API:' + (currentApiClockSecs !== null ? vpFmt(currentApiClockSecs) : 'N/A'));
+}
+
+function vpManualResume() {
+  // Log puck drop moment — calculate stoppage duration on both streams
   const now = Date.now();
+  const realElapsed = stoppageStartTime ? Math.round((now - stoppageStartTime) / 1000) : null;
+  const vpElapsed = stoppageStartVpSecs !== null ? Math.round(stoppageStartVpSecs - vpClockSecs) : null;
+  const apiElapsed = (stoppageStartApiSecs !== null && currentApiClockSecs !== null)
+    ? Math.round(stoppageStartApiSecs - currentApiClockSecs) : null;
 
-  if (lastApiClockSecs !== null && lastApiClockSecs === apiSecs) {
-    // API clock unchanged — pause VP clock after 15s (real stoppages only)
-    if (vpClockRunning && lastApiClockTime && (now - lastApiClockTime) > 15000) {
-      vpClockRunning = false;
-      addLog('Stoppage detected — VP clock paused');
-      gameLogEntry('STOPPAGE');
-      vpUpdateDisplay();
-    }
-  } else {
-    // API clock moved — resume VP clock
-    if (!vpClockRunning && vpClockSecs < 19*60+59 && vpClockSecs > 0) {
-      vpClockRunning = true;
-      addLog('Play resumed — VP clock running');
-      gameLogEntry('RESUME');
-      vpUpdateDisplay();
-    }
-    lastApiClockSecs = apiSecs;
-    lastApiClockTime = now;
-  }
+  gameLogEntry('PUCK_DROP', {
+    vpClock: vpFmt(vpClockSecs),
+    apiClock: currentApiClockSecs !== null ? vpFmt(currentApiClockSecs) : 'N/A',
+    delaySecs: Math.round(vpClockSecs - (currentApiClockSecs || 0)),
+    stoppageRealSecs: realElapsed,
+    stoppageVpSecs: vpElapsed,
+    stoppageApiSecs: apiElapsed,
+    driftThisStoppage: vpElapsed !== null && apiElapsed !== null ? vpElapsed - apiElapsed : null
+  });
+
+  stoppageStartVpSecs = null;
+  stoppageStartApiSecs = null;
+  stoppageStartTime = null;
+
+  // Swap buttons back
+  document.getElementById('vpPauseBtn').style.display = 'flex';
+  document.getElementById('vpResumeBtn').style.display = 'none';
+  addLog('▶ Puck drop logged — VP:' + vpFmt(vpClockSecs) + ' API:' + (currentApiClockSecs !== null ? vpFmt(currentApiClockSecs) : 'N/A'));
 }
 
 function clearDelay() {

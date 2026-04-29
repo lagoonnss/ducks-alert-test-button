@@ -2516,16 +2516,18 @@ async function checkPenalties(gameId, pbp) {
   const latest = penalties[penalties.length - 1];
   if (latest.eventId === lastPenaltyEventId) return;
 
-  // Lock-back: ignore penalties that happened more than 2 minutes ago
-  // Compare penalty time to current API clock — if difference > 120s, skip
+  // Lock-back: ignore penalties that happened more than 3 minutes ago
+  // Account for stream delay — use a generous window
   if (currentApiClockSecs !== null && latest.timeInPeriod) {
     const parts = latest.timeInPeriod.split(':');
     if (parts.length === 2) {
       const penaltyClockSecs = parseInt(parts[0]) * 60 + parseInt(parts[1]);
       // Hockey clock counts down — penalty happened earlier = higher clock value
-      const elapsed = penaltyClockSecs - currentApiClockSecs;
-      if (elapsed > 120) {
-        lastPenaltyEventId = latest.eventId; // mark as seen so we don't recheck
+      // Add streamDelayMs buffer to account for stream delay offset
+      const streamDelaySecs = Math.round(streamDelayMs / 1000);
+      const elapsed = penaltyClockSecs - currentApiClockSecs - streamDelaySecs;
+      if (elapsed > 180) {
+        lastPenaltyEventId = latest.eventId;
         return;
       }
     }

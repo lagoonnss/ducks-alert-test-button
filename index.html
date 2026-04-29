@@ -2671,8 +2671,6 @@ let vpClockSecs = 19 * 60 + 59;   // 19:59
 let vpClockRunning = false;
 let vpClockInterval = null;
 let vpManualOffsetSecs = 0;        // manual fine-tune adjustment
-let lastApiClockSecs = null;       // to detect stoppages
-let lastApiClockTime = null;       // when we last saw the API clock change
 
 function vpFmt(secs) {
   const s = Math.max(0, Math.round(secs));
@@ -2727,31 +2725,6 @@ function adjustVpDelay(secs) {
 }
 
 // Called from pollClock to sync stoppage detection
-function updateVpClockFromApi(apiSecs) {
-  // Don't run before period start
-  if (vpClockSecs >= 19*60+59 && !vpClockRunning) return;
-  const now = Date.now();
-
-  if (lastApiClockSecs !== null && lastApiClockSecs === apiSecs) {
-    // API clock unchanged — check stoppage threshold (8s to avoid false positives)
-    if (vpClockRunning && lastApiClockTime && (now - lastApiClockTime) > 8000) {
-      vpClockRunning = false;
-      addLog('Stoppage detected — VP clock paused');
-      gameLogEntry('STOPPAGE');
-      vpUpdateDisplay();
-    }
-  } else {
-    // API clock moved — resume VP clock if stopped mid-period
-    if (!vpClockRunning && vpClockSecs < 19*60+59 && vpClockSecs > 0) {
-      vpClockRunning = true;
-      addLog('Play resumed — VP clock running');
-      gameLogEntry('RESUME');
-      vpUpdateDisplay();
-    }
-    lastApiClockSecs = apiSecs;
-    lastApiClockTime = now;
-  }
-}
 
 function formatVpClockInput(el) {
   let v = el.value.replace(/[^0-9]/g, '');
@@ -2785,6 +2758,35 @@ function applyManualVpClock() {
   addLog('VP clock manually set to ' + vpFmt(vpClockSecs));
   gameLogEntry('MANUAL_CLOCK_SET', { setTo: vpFmt(vpClockSecs) });
   vpUpdateDisplay();
+}
+
+let lastApiClockSecs = null;
+let lastApiClockTime = null;
+
+function updateVpClockFromApi(apiSecs) {
+  // Only run after period has been started
+  if (vpClockSecs >= 19*60+59 && !vpClockRunning) return;
+  const now = Date.now();
+
+  if (lastApiClockSecs !== null && lastApiClockSecs === apiSecs) {
+    // API clock unchanged — pause VP clock after 15s (real stoppages only)
+    if (vpClockRunning && lastApiClockTime && (now - lastApiClockTime) > 15000) {
+      vpClockRunning = false;
+      addLog('Stoppage detected — VP clock paused');
+      gameLogEntry('STOPPAGE');
+      vpUpdateDisplay();
+    }
+  } else {
+    // API clock moved — resume VP clock
+    if (!vpClockRunning && vpClockSecs < 19*60+59 && vpClockSecs > 0) {
+      vpClockRunning = true;
+      addLog('Play resumed — VP clock running');
+      gameLogEntry('RESUME');
+      vpUpdateDisplay();
+    }
+    lastApiClockSecs = apiSecs;
+    lastApiClockTime = now;
+  }
 }
 
 function clearDelay() {

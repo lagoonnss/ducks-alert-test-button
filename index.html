@@ -1464,7 +1464,10 @@
         ▶ Puck Drop
       </button>
     </div>
-    <div class="vp-delay-display" id="vpDelayDisplay">Delay: <span id="delayDisplay">not set</span> &nbsp;|&nbsp; App clock: <span id="apiClock">waiting...</span></div>
+    <div class="vp-delay-display" id="vpDelayDisplay" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Delay: <span id="delayDisplay">not set</span> &nbsp;|&nbsp; App clock: <span id="apiClock">waiting...</span></span>
+      <button class="delay-btn" onclick="clearDelay()" style="background:transparent;border:1px solid rgba(250,204,21,0.5);color:#facc15;font-size:10px;padding:2px 8px;">Clear</button>
+    </div>
     <div id="vpManualSyncRow" style="display:none;margin-top:8px;">
       <div style="font-size:11px;color:var(--muted);margin-bottom:5px;font-family:'Barlow',sans-serif;">
         Lost sync? Type current Victory+ clock:
@@ -2690,12 +2693,9 @@ function vpFmt(secs) {
 }
 
 function vpUpdateDisplay() {
-  const delaySecs = currentApiClockSecs !== null ? Math.round(vpClockSecs - currentApiClockSecs) : null;
+  // Just update display — do NOT recalculate streamDelayMs here
   const delayEl = document.getElementById('delayDisplay');
-  if (delayEl && delaySecs !== null) {
-    streamDelayMs = Math.max(0, delaySecs) * 1000;
-    delayEl.textContent = Math.max(0, delaySecs) + 's';
-  }
+  if (delayEl) delayEl.textContent = Math.round(streamDelayMs / 1000) + 's';
   const statusEl = document.getElementById('vpClockStatus');
   if (statusEl) statusEl.textContent = apiClockFrozen ? 'Stopped' : 'Running';
   if (statusEl) statusEl.className = 'vp-clock-status ' + (apiClockFrozen ? 'stopped' : 'running');
@@ -2716,6 +2716,12 @@ function vpPeriodStart() {
   document.getElementById('vpManualSyncRow').style.display = 'block';
   document.getElementById('vpStopResumeRow').style.display = 'flex';
   gameLogEntry('PERIOD_START', { delaySecs });
+  const startBtn = document.getElementById('vpStartBtn');
+  if (startBtn) {
+    startBtn.textContent = '✓ Period Started';
+    startBtn.style.background = '#22c55e';
+    startBtn.style.color = '#080808';
+  }
   addLog('Period Start — delay set to ' + delaySecs + 's');
 }
 
@@ -2841,6 +2847,12 @@ function clearDelay() {
   if (srRow) srRow.style.display = 'none';
   document.getElementById('vpPauseBtn').style.display = 'flex';
   document.getElementById('vpResumeBtn').style.display = 'none';
+  const startBtn2 = document.getElementById('vpStartBtn');
+  if (startBtn2) {
+    startBtn2.textContent = '▶ Period Start';
+    startBtn2.style.background = '';
+    startBtn2.style.color = '';
+  }
   addLog('Delay cleared');
 }
 

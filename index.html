@@ -2753,11 +2753,10 @@ function vpPeriodStart() {
 }
 
 function adjustVpDelay(secs) {
-  vpClockSecs = Math.max(0, Math.min(19*60+59, vpClockSecs + secs));
-  const delaySecs = currentApiClockSecs !== null ? Math.round(vpClockSecs - currentApiClockSecs) : 0;
-  streamDelayMs = Math.max(0, delaySecs) * 1000;
+  streamDelayMs = Math.max(0, streamDelayMs + (secs * 1000));
+  const delaySecs = Math.round(streamDelayMs / 1000);
   const delayEl = document.getElementById('delayDisplay');
-  if (delayEl) delayEl.textContent = Math.max(0, delaySecs) + 's';
+  if (delayEl) delayEl.textContent = delaySecs + 's';
   gameLogEntry('MANUAL_ADJUST', { adjustSecs: secs, delaySecs });
   addLog('Delay adjusted ' + (secs > 0 ? '+' : '') + secs + 's → ' + delaySecs + 's');
 }

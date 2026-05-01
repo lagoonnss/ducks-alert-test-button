@@ -1463,6 +1463,10 @@
         style="background:#1c1f24;border:1px solid rgba(34,197,94,0.4);color:#22c55e;flex:1;display:none;">
         ▶ Puck Drop
       </button>
+      <button class="vp-start-btn" onclick="logTvClock()"
+        style="background:#1c1f24;border:1px solid rgba(96,165,250,0.4);color:#60a5fa;flex:1;">
+        📺 TV Clock
+      </button>
     </div>
     <div class="vp-delay-display" id="vpDelayDisplay" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
       <span>Delay: <span id="delayDisplay">not set</span> &nbsp;|&nbsp; API: <span id="apiClock">--:--</span></span>
@@ -1565,6 +1569,40 @@ async function pollClock() {
         currentApiClockSecs = parseInt(parts[0]) * 60 + parseInt(parts[1]);
         updateVpClockFromApi(currentApiClockSecs);
 
+        // Detect end of regulation: period 3, clock at 0:00, Ducks leading
+        if (period === 3 && currentApiClockSecs === 0 && status.type.state === 'in') {
+          zeroClockCount++;
+          if (zeroClockCount >= 3 && !winFiredThisGame) {
+            // Check score — fetch from current game data
+            const events2 = data.events || [];
+            const dg = events2.find(e => {
+              const teams = e.competitions?.[0]?.competitors?.map(c => c.team.abbreviation) || [];
+              return teams.includes('ANA');
+            });
+            if (dg) {
+              const comps = dg.competitions[0].competitors;
+              const anaComp = comps.find(c => c.team.abbreviation === 'ANA');
+              const oppComp = comps.find(c => c.team.abbreviation !== 'ANA');
+              const anaScore = parseInt(anaComp?.score || 0);
+              const oppScore = parseInt(oppComp?.score || 0);
+              if (anaScore > oppScore) {
+                addLog('P3 clock at 0:00 — DUCKS WIN! Firing win popup');
+                winFiredThisGame = true;
+                setTimeout(() => {
+                  if (!document.getElementById('winPopup').classList.contains('shown')) {
+                    document.getElementById('winPopup').classList.add('shown');
+                    showWinPopup(anaScore, oppComp?.team?.abbreviation || 'OPP', oppScore);
+                  }
+                }, streamDelayMs);
+              } else if (anaScore === oppScore) {
+                addLog('P3 clock at 0:00 — tied, going to OT');
+              }
+            }
+          }
+        } else {
+          zeroClockCount = 0;
+        }
+
         // Track last API stop for visual reference
         if (prevApiSecs !== null && prevApiSecs === currentApiClockSecs) {
           const lastStopEl = document.getElementById('apiLastStop');
@@ -1661,6 +1699,24 @@ function gameLogEntry(type, data = {}) {
   return entry;
 }
 
+function logTvClock() {
+  const input = prompt('Enter the clock you see on Victory+ right now (MM:SS):');
+  if (!input || !input.match(/^\d{1,2}:\d{2}$/)) return;
+  const [min, sec] = input.split(':').map(Number);
+  const tvSecs = min * 60 + sec;
+  const apiSecs = currentApiClockSecs;
+  const trueDiff = apiSecs !== null ? Math.round(tvSecs - apiSecs) : null;
+  gameLogEntry('TV_CLOCK_LOG', {
+    tvClock:    input,
+    tvSecs,
+    apiClock:   apiSecs !== null ? vpFmt(apiSecs) : 'N/A',
+    apiSecs,
+    trueStreamDelaySecs: trueDiff,
+    currentSetDelaySecs: Math.round(streamDelayMs / 1000)
+  });
+  addLog(`📺 TV Clock logged: ${input} | API: ${apiSecs !== null ? vpFmt(apiSecs) : 'N/A'} | true delay=${trueDiff}s | set delay=${Math.round(streamDelayMs/1000)}s`);
+}
+
 function logTvGoal(team) {
   const entry = gameLogEntry('TV_GOAL', { team });
   addLog(`📺 TV Goal logged: ${team} · VP:${entry.vpClock} API:${entry.apiClock} Δ${entry.delaySecs}s`);
@@ -1734,9 +1790,13 @@ async function fetchGameData() {
           if (e.series) {
             const homeComp = e.series.competitors?.find(c => c.homeAway === 'home');
             const awayComp = e.series.competitors?.find(c => c.homeAway === 'away');
+            // Try wins first, then score, then look at summary field
+            const homeW = homeComp?.wins ?? homeComp?.score ?? e.series.summary?.split('-')?.[0]?.trim() ?? 0;
+            const awayW = awayComp?.wins ?? awayComp?.score ?? e.series.summary?.split('-')?.[1]?.trim() ?? 0;
+            console.log('Series data:', JSON.stringify(e.series));
             return {
-              homeWins: homeComp?.wins ?? homeComp?.score ?? 0,
-              awayWins: awayComp?.wins ?? awayComp?.score ?? 0,
+              homeWins: parseInt(homeW) || 0,
+              awayWins: parseInt(awayW) || 0,
               gameNumberOfSeries: e.series.gameNumber || e.series.type?.abbreviation || ''
             };
           }
@@ -2070,6 +2130,7 @@ function updateScoreDisplay(game) {
   } else if (state === 'FINAL' || state === 'OFF') {
     statusEl.textContent = 'Final'; statusEl.className = 'game-status';
     periodEl.textContent = 'Game over';
+    winFiredThisGame = false; // reset for next game
     // Trigger win popup once when game ends with ANA leading
     const anaFinalScore = ducksTeam.score ?? 0;
     const oppFinalScore = oppTeam.score ?? 0;
@@ -2659,11 +2720,24 @@ async function poll() {
       } catch(e) {}
       addLog(`Tracking: ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore}`);
     } else if (currentScore > lastDucksScore) {
-      // ANA score went up — confirmed Ducks goal
-      addLog(`GOAL! ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore}`, true);
-      gameLogEntry('API_GOAL', { team: 'ANA', score: currentScore });
-      const pbp = await fetchPlayByPlay(ducksGame.id);
-      triggerGoalAlert(pbp);
+      const period = ducksGame.periodDescriptor?.number || 1;
+      const isOT = period > 3;
+      gameLogEntry('API_GOAL', { team: 'ANA', score: currentScore, period });
+      if (isOT && !winFiredThisGame) {
+        // OT goal = win, skip goal alert and go straight to win
+        addLog(`OT GOAL — DUCKS WIN! ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore}`, true);
+        winFiredThisGame = true;
+        setTimeout(() => {
+          if (!document.getElementById('winPopup').classList.contains('shown')) {
+            document.getElementById('winPopup').classList.add('shown');
+            showWinPopup(currentScore, oppTeam.abbrev, oppScore);
+          }
+        }, streamDelayMs);
+      } else {
+        addLog(`GOAL! ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore}`, true);
+        const pbp = await fetchPlayByPlay(ducksGame.id);
+        triggerGoalAlert(pbp);
+      }
       lastDucksScore = currentScore;
     } else if (currentScore < lastDucksScore) {
       addLog(`Score corrected: ANA ${currentScore}`);
@@ -2705,6 +2779,8 @@ function startWatching() {
 }
 
 let lastGoalDetectedAt = null;
+let zeroClockCount = 0;       // consecutive polls showing 0:00 in period 3
+let winFiredThisGame = false; // prevent double-firing win
 
 let currentApiClockSecs = null;
 
@@ -2736,7 +2812,14 @@ function vpPeriodStart() {
   lastApiClockSecs = null;
   lastApiClockTime = null;
   if (!isRunning) startWatching();
-  const delaySecs = currentApiClockSecs !== null ? Math.round(vpClockSecs - currentApiClockSecs) : 0;
+  if (currentApiClockSecs === null) {
+    addLog('⚠ No API clock yet — tap Period Start again in a moment', false, true);
+    return;
+  }
+  const delaySecs = Math.round(vpClockSecs - currentApiClockSecs);
+  if (delaySecs <= 0) {
+    addLog('⚠ Delay is 0 or negative — is the game live?', false, true);
+  }
   streamDelayMs = Math.max(0, delaySecs) * 1000;
   const delayEl = document.getElementById('delayDisplay');
   if (delayEl) delayEl.textContent = Math.max(0, delaySecs) + 's';

@@ -1794,6 +1794,7 @@ async function fetchGameData() {
             const homeW = homeComp?.wins ?? homeComp?.score ?? e.series.summary?.split('-')?.[0]?.trim() ?? 0;
             const awayW = awayComp?.wins ?? awayComp?.score ?? e.series.summary?.split('-')?.[1]?.trim() ?? 0;
             console.log('Series data:', JSON.stringify(e.series));
+            addLog('Series raw: ' + JSON.stringify(e.series).slice(0, 120));
             return {
               homeWins: parseInt(homeW) || 0,
               awayWins: parseInt(awayW) || 0,

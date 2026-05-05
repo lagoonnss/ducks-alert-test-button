@@ -2105,7 +2105,16 @@ function updateScoreDisplay(game) {
     statusEl.textContent = 'Live'; statusEl.className = 'game-status live';
     if (period) {
       let pLabel = period.periodType === 'OT' ? 'OT' : period.periodType === 'SO' ? 'SO' : `Period ${period.number}`;
-      if (period.inIntermission) pLabel = `INT ${period.number}`;
+      if (period.inIntermission) {
+        pLabel = `INT ${period.number}`;
+        // Reset Period Start button — new period coming
+        const vpBtn = document.getElementById('vpStartBtn');
+        if (vpBtn && vpBtn.textContent.includes('Started')) {
+          vpBtn.textContent = '▶ Period Start';
+          vpBtn.style.background = '';
+          vpBtn.style.color = '';
+        }
+      }
       else if (game.statusDetail?.toLowerCase().includes('end')) pLabel = `End P${period.number}`;
       else if (game.statusDetail?.toLowerCase().includes('intermission')) pLabel = `INT`;
       // Show game clock if available
@@ -2137,10 +2146,10 @@ function updateScoreDisplay(game) {
     const oppFinalScore = oppTeam.score ?? 0;
     if (anaFinalScore > oppFinalScore && !document.getElementById('winPopup').classList.contains('shown')) {
       document.getElementById('winPopup').classList.add('shown');
-      showWinPopup(anaFinalScore, oppTeam.abbrev, oppFinalScore);
+      setTimeout(() => showWinPopup(anaFinalScore, oppTeam.abbrev, oppFinalScore), streamDelayMs);
     } else if (anaFinalScore < oppFinalScore && !document.getElementById('lossPopup').classList.contains('shown')) {
       document.getElementById('lossPopup').classList.add('shown');
-      showLossPopup(anaFinalScore, oppTeam.abbrev, oppFinalScore);
+      setTimeout(() => showLossPopup(anaFinalScore, oppTeam.abbrev, oppFinalScore), streamDelayMs);
     }
   } else {
     statusEl.textContent = state || 'Unknown'; statusEl.className = 'game-status';
@@ -2652,7 +2661,11 @@ async function checkPenalties(gameId, pbp) {
   const time = latest.timeInPeriod || '';
 
   addLog(`Penalty: ${player} (${teamAbbr}) — ${type} ${duration}min`);
-  showPenaltyToast(player, type.charAt(0).toUpperCase()+type.slice(1), duration, teamAbbr, period, time);
+  if (streamDelayMs > 0) {
+    setTimeout(() => showPenaltyToast(player, type.charAt(0).toUpperCase()+type.slice(1), duration, teamAbbr, period, time), streamDelayMs);
+  } else {
+    showPenaltyToast(player, type.charAt(0).toUpperCase()+type.slice(1), duration, teamAbbr, period, time);
+  }
 }
 
 let streamDelayMs = 0;
@@ -2749,7 +2762,11 @@ async function poll() {
         addLog(`${oppTeam.abbrev} goal. ${oppTeam.abbrev} ${oppScore} — ANA ${currentScore}`);
         gameLogEntry('API_GOAL', { team: oppTeam.abbrev, score: oppScore });
         const oppPbp = await fetchPlayByPlay(ducksGame.id);
-        showAngryPopup(oppTeam.abbrev, oppScore, oppPbp);
+        if (streamDelayMs > 0) {
+          setTimeout(() => showAngryPopup(oppTeam.abbrev, oppScore, oppPbp), streamDelayMs);
+        } else {
+          showAngryPopup(oppTeam.abbrev, oppScore, oppPbp);
+        }
         lastOppScore = oppScore;
       } else {
         if (lastOppScore === null) lastOppScore = oppScore;

@@ -2701,18 +2701,13 @@ async function poll() {
     const ducksGame = games.find(g => g.awayTeam.abbrev === 'ANA' || g.homeTeam.abbrev === 'ANA');
 
     if (!ducksGame) {
-      addLog('No Ducks game today.');
+      const allAbbrevs = games.map(g => `${g.awayTeam.abbrev}@${g.homeTeam.abbrev}`).join(', ');
+      addLog(`No ANA game found. Games: ${allAbbrevs || 'none'}`);
       ['gameStatus','ducksScore','oppScore','oppAbbr','periodInfo'].forEach(id => {
         const el = document.getElementById(id);
         if(el) el.textContent = id === 'gameStatus' ? 'No game today' : '—';
       });
       return;
-    }
-
-    // Score display updated after delay when goal fires
-    // For non-goal polls update immediately
-    if (currentScore === lastDucksScore || lastDucksScore === null) {
-      updateScoreDisplay(ducksGame);
     }
 
     // Fetch boxscore for live stats — only when game is active
@@ -2744,6 +2739,12 @@ async function poll() {
     const oppTeam = isAnaAway ? ducksGame.homeTeam : ducksGame.awayTeam;
     const currentScore = anaTeam.score ?? 0;
     const oppScore = oppTeam.score ?? 0;
+
+    // Update score display immediately for non-goal polls
+    // Goal polls delay the update until horn fires
+    if (currentScore === lastDucksScore || lastDucksScore === null) {
+      updateScoreDisplay(ducksGame);
+    }
 
     if (lastDucksScore === null) {
       lastDucksScore = currentScore;

@@ -1852,6 +1852,11 @@ async function fetchBoxscore(gameId) {
     const data = await r.json();
     if (!data.boxscore) return null;
     const teams = data.boxscore.teams || [];
+    if (teams[0] && !window._statsLogged) {
+      window._statsLogged = true;
+      const names = (teams[0].statistics || []).map(s => s.name).join(', ');
+      addLog('Stat names: ' + names);
+    }
 
     const getStatVal = (teamIdx, ...names) => {
       const team = teams[teamIdx];
@@ -1880,11 +1885,11 @@ async function fetchBoxscore(gameId) {
     return {
       teamGameStats: [
         { category: 'sog',
-          homeValue: getStatVal(0, 'shotsOnGoal', 'shots', 'SOG'),
-          awayValue: getStatVal(1, 'shotsOnGoal', 'shots', 'SOG') },
+          homeValue: getStatVal(0, 'shotsTotal', 'shotsOnGoal', 'shots', 'SOG'),
+          awayValue: getStatVal(1, 'shotsTotal', 'shotsOnGoal', 'shots', 'SOG') },
         { category: 'faceoffWinningPctg',
-          homeValue: getStatVal(0, 'faceOffWinPercentage', 'faceoffsWon', 'faceOffPct', 'FOW%'),
-          awayValue: getStatVal(1, 'faceOffWinPercentage', 'faceoffsWon', 'faceOffPct', 'FOW%') },
+          homeValue: getStatVal(0, 'faceoffsWonPct', 'faceoffWinPct', 'faceOffWinPercentage', 'faceOffPct'),
+          awayValue: getStatVal(1, 'faceoffsWonPct', 'faceoffWinPct', 'faceOffWinPercentage', 'faceOffPct') },
         { category: 'pim',
           homeValue: getStatVal(0, 'penaltyMinutes', 'PIM'),
           awayValue: getStatVal(1, 'penaltyMinutes', 'PIM') },
@@ -2729,8 +2734,10 @@ async function poll() {
     const oppScore = oppTeam.score ?? 0;
 
     // Update score display immediately for non-goal polls
-    // Goal polls delay the update until horn fires
-    if (currentScore === lastDucksScore || lastDucksScore === null) {
+    // Goal polls (ANA or opponent) delay the update until horn/popup fires,
+    // so the visible score change and the alert always appear simultaneously
+    const oppScoreChanged = lastOppScore !== null && oppScore > lastOppScore;
+    if ((currentScore === lastDucksScore && !oppScoreChanged) || lastDucksScore === null) {
       updateScoreDisplay(ducksGame);
     }
 
@@ -2784,9 +2791,14 @@ async function poll() {
         addLog(`${oppTeam.abbrev} goal. ${oppTeam.abbrev} ${oppScore} — ANA ${currentScore}`);
         gameLogEntry('API_GOAL', { team: oppTeam.abbrev, score: oppScore });
         const oppPbp = await fetchPlayByPlay(ducksGame.id);
+        // Delay score display AND popup together — fire simultaneously (mirrors ANA goal handling)
         if (streamDelayMs > 0) {
-          setTimeout(() => showAngryPopup(oppTeam.abbrev, oppScore, oppPbp), streamDelayMs);
+          setTimeout(() => {
+            updateScoreDisplay(ducksGame);
+            showAngryPopup(oppTeam.abbrev, oppScore, oppPbp);
+          }, streamDelayMs);
         } else {
+          updateScoreDisplay(ducksGame);
           showAngryPopup(oppTeam.abbrev, oppScore, oppPbp);
         }
         lastOppScore = oppScore;

@@ -1626,20 +1626,42 @@ async function pollClock() {
   } catch(e) {}
 }
 let lastDucksScore = null;
+let scoreHoldCount = 0; // pending delayed goal alerts — score display stays frozen until they fire
 let audioCtx = null;
 let isRunning = false;
 
 function getAudioCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.onstatechange = () => { try { addLog('Audio state: ' + audioCtx.state); } catch(e) {} };
+    // iOS: treat page audio as media playback so the ringer/silent switch doesn't mute it
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e) {}
+  }
+  if (audioCtx.state !== 'running') { try { audioCtx.resume(); } catch(e) {} }
   return audioCtx;
 }
+
+// Make sure the context is actually running right before an alert plays.
+// iOS can re-suspend/interrupt the context at any time (lock screen, other audio, backgrounding).
+async function ensureAudioRunning(ctx) {
+  if (ctx.state === 'running') return true;
+  try { await Promise.race([ctx.resume(), new Promise(r => setTimeout(r, 400))]); } catch(e) {}
+  if (ctx.state !== 'running') {
+    addLog('🔇 Audio BLOCKED (state: ' + ctx.state + ') — tap the screen anywhere to re-enable sound', true);
+    return false;
+  }
+  return true;
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && audioCtx && audioCtx.state !== 'running') { try { audioCtx.resume(); } catch(e) {} }
+});
 
 // iOS requires a user tap to unlock Web Audio API
 // Unlock on the very first touch anywhere on the screen
 let audioUnlocked = false;
 function unlockAudio() {
-  if (audioUnlocked) return;
+  // Re-runs on every tap whenever the context isn't running (iOS can re-suspend it)
+  if (audioUnlocked && audioCtx && audioCtx.state === 'running') return;
   const ctx = getAudioCtx();
   if (ctx.state === 'suspended') {
     ctx.resume().then(() => {
@@ -1677,6 +1699,7 @@ let activeHornSource = null;
 
 async function playFoghorn() {
   const ctx = getAudioCtx();
+  await ensureAudioRunning(ctx);
   const buffer = await loadHorn();
   if (activeHornSource) { try { activeHornSource.stop(); } catch(e){} activeHornSource = null; }
   const source = ctx.createBufferSource();
@@ -2322,15 +2345,20 @@ let goalSongGainNode = null;
 let goalSongSource = null;
 let goalSongBuffer = null;
 
+async function loadGoalSong(ctx) {
+  if (goalSongBuffer) return goalSongBuffer;
+  const binary = atob(OFFSPRING_SRC.split(',')[1]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  goalSongBuffer = await ctx.decodeAudioData(bytes.buffer);
+  return goalSongBuffer;
+}
+
 async function playGoalSong() {
   try {
     const ctx = getAudioCtx();
-    if (!goalSongBuffer) {
-      const binary = atob(OFFSPRING_SRC.split(',')[1]);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      goalSongBuffer = await ctx.decodeAudioData(bytes.buffer);
-    }
+    await ensureAudioRunning(ctx);
+    await loadGoalSong(ctx);
     if (goalSongGainNode) goalSongGainNode.disconnect();
     goalSongGainNode = ctx.createGain();
     goalSongGainNode.gain.setValueAtTime(1.0, ctx.currentTime);
@@ -2737,7 +2765,7 @@ async function poll() {
     // Goal polls (ANA or opponent) delay the update until horn/popup fires,
     // so the visible score change and the alert always appear simultaneously
     const oppScoreChanged = lastOppScore !== null && oppScore > lastOppScore;
-    if ((currentScore === lastDucksScore && !oppScoreChanged) || lastDucksScore === null) {
+    if (lastDucksScore === null || (scoreHoldCount === 0 && currentScore === lastDucksScore && !oppScoreChanged)) {
       updateScoreDisplay(ducksGame);
     }
 
@@ -2760,7 +2788,9 @@ async function poll() {
       if (isOT && !winFiredThisGame) {
         addLog(`OT GOAL — DUCKS WIN! ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore}`, true);
         winFiredThisGame = true;
+        scoreHoldCount++;
         setTimeout(() => {
+          scoreHoldCount = Math.max(0, scoreHoldCount - 1);
           updateScoreDisplay(ducksGame);
           if (!document.getElementById('winPopup').classList.contains('shown')) {
             document.getElementById('winPopup').classList.add('shown');
@@ -2772,7 +2802,9 @@ async function poll() {
         const pbp = await fetchPlayByPlay(ducksGame.id);
         // Delay score display AND horn together — fire simultaneously
         if (streamDelayMs > 0) {
+          scoreHoldCount++;
           setTimeout(() => {
+            scoreHoldCount = Math.max(0, scoreHoldCount - 1);
             updateScoreDisplay(ducksGame);
             _fireGoalAlert(pbp);
           }, streamDelayMs);
@@ -2793,7 +2825,9 @@ async function poll() {
         const oppPbp = await fetchPlayByPlay(ducksGame.id);
         // Delay score display AND popup together — fire simultaneously (mirrors ANA goal handling)
         if (streamDelayMs > 0) {
+          scoreHoldCount++;
           setTimeout(() => {
+            scoreHoldCount = Math.max(0, scoreHoldCount - 1);
             updateScoreDisplay(ducksGame);
             showAngryPopup(oppTeam.abbrev, oppScore, oppPbp);
           }, streamDelayMs);
@@ -2817,7 +2851,7 @@ function startWatching() {
   if (isRunning) return;
   isRunning = true;
   lastDucksScore = null;
-  getAudioCtx(); loadHorn();
+  getAudioCtx(); loadHorn(); loadGoalSong(getAudioCtx()).catch(() => {}); // preload so first goal has no decode lag
   document.getElementById('startBtn').style.display = 'none';
   document.getElementById('stopBtn').style.display = 'flex';
   document.getElementById('pollingRing').className = 'polling-ring';

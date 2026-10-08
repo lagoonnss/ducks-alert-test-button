@@ -1547,7 +1547,17 @@
 let pollInterval = null;
 let clockInterval = null;
 
+let pollBusy = false, pollBusySince = 0;
+let clockBusy = false, clockBusySince = 0;
+let lastBoxscoreAt = 0, lastPenCheckAt = 0;
+
 async function pollClock() {
+  if (clockBusy && Date.now() - clockBusySince < 5000) return;
+  clockBusy = true; clockBusySince = Date.now();
+  try { await _pollClock(); } finally { clockBusy = false; }
+}
+
+async function _pollClock() {
   try {
     const r = await fetch('https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard');
     const data = await r.json();
@@ -2719,6 +2729,13 @@ function showSyncBar(show) {
 }
 
 async function poll() {
+  // Skip this tick if the previous poll is still running (otherwise one goal can be detected twice)
+  if (pollBusy && Date.now() - pollBusySince < 8000) return;
+  pollBusy = true; pollBusySince = Date.now();
+  try { await _poll(); } finally { pollBusy = false; }
+}
+
+async function _poll() {
   try {
     const games = await fetchGameData();
     const ducksGame = games.find(g => g.awayTeam.abbrev === 'ANA' || g.homeTeam.abbrev === 'ANA');
@@ -2735,13 +2752,18 @@ async function poll() {
 
     // Fetch boxscore for live stats — only when game is active
     const isActive = ['LIVE', 'CRIT', 'FINAL'].includes(ducksGame.gameState);
-    const boxscore = isActive ? await fetchBoxscore(ducksGame.id) : null;
+    let boxscore = null;
+    if (isActive && Date.now() - lastBoxscoreAt >= 10000) {
+      lastBoxscoreAt = Date.now();
+      boxscore = await fetchBoxscore(ducksGame.id);
+    }
     if (boxscore) {
       updateStats(boxscore, ducksGame.awayTeam.abbrev === 'ANA' ? ducksGame.homeTeam.abbrev : ducksGame.awayTeam.abbrev);
     }
 
     // Check for new penalties
-    if (ducksGame.gameState === 'LIVE' || ducksGame.gameState === 'CRIT') {
+    if ((ducksGame.gameState === 'LIVE' || ducksGame.gameState === 'CRIT') && Date.now() - lastPenCheckAt >= 900) {
+      lastPenCheckAt = Date.now();
       const penPbp = await fetchPlayByPlay(ducksGame.id);
       if (penPbp) {
         // If this is first poll, seed penalty ID without firing toast
@@ -2782,6 +2804,8 @@ async function poll() {
       } catch(e) {}
       addLog(`Tracking: ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore}`);
     } else if (currentScore > lastDucksScore) {
+      lastDucksScore = currentScore; // set BEFORE any await so a overlapping poll can't re-detect this goal
+      const detectedAt = Date.now();
       const period = ducksGame.periodDescriptor?.number || 1;
       const isOT = period > 3;
       gameLogEntry('API_GOAL', { team: 'ANA', score: currentScore, period });
@@ -2799,21 +2823,21 @@ async function poll() {
         }, streamDelayMs);
       } else {
         addLog(`GOAL! ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore}`, true);
+        const holdScore = streamDelayMs > 0;
+        if (holdScore) scoreHoldCount++; // freeze score display immediately, before the fetch
         const pbp = await fetchPlayByPlay(ducksGame.id);
         // Delay score display AND horn together — fire simultaneously
-        if (streamDelayMs > 0) {
-          scoreHoldCount++;
+        if (holdScore) {
           setTimeout(() => {
             scoreHoldCount = Math.max(0, scoreHoldCount - 1);
             updateScoreDisplay(ducksGame);
             _fireGoalAlert(pbp);
-          }, streamDelayMs);
+          }, Math.max(0, streamDelayMs - (Date.now() - detectedAt)));
         } else {
           updateScoreDisplay(ducksGame);
           _fireGoalAlert(pbp);
         }
       }
-      lastDucksScore = currentScore;
     } else if (currentScore < lastDucksScore) {
       addLog(`Score corrected: ANA ${currentScore}`);
       lastDucksScore = currentScore;
@@ -2822,20 +2846,22 @@ async function poll() {
       if (lastOppScore !== null && oppScore > lastOppScore) {
         addLog(`${oppTeam.abbrev} goal. ${oppTeam.abbrev} ${oppScore} — ANA ${currentScore}`);
         gameLogEntry('API_GOAL', { team: oppTeam.abbrev, score: oppScore });
+        lastOppScore = oppScore; // set BEFORE any await (see ANA goal)
+        const detectedAt = Date.now();
+        const holdScore = streamDelayMs > 0;
+        if (holdScore) scoreHoldCount++;
         const oppPbp = await fetchPlayByPlay(ducksGame.id);
         // Delay score display AND popup together — fire simultaneously (mirrors ANA goal handling)
-        if (streamDelayMs > 0) {
-          scoreHoldCount++;
+        if (holdScore) {
           setTimeout(() => {
             scoreHoldCount = Math.max(0, scoreHoldCount - 1);
             updateScoreDisplay(ducksGame);
             showAngryPopup(oppTeam.abbrev, oppScore, oppPbp);
-          }, streamDelayMs);
+          }, Math.max(0, streamDelayMs - (Date.now() - detectedAt)));
         } else {
           updateScoreDisplay(ducksGame);
           showAngryPopup(oppTeam.abbrev, oppScore, oppPbp);
         }
-        lastOppScore = oppScore;
       } else {
         if (lastOppScore === null) lastOppScore = oppScore;
         addLog(`ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore} · no change`);

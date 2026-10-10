@@ -1547,6 +1547,54 @@
 let pollInterval = null;
 let clockInterval = null;
 
+// ── DEV ONLY: ESPN vs NHL source race (logging only — never triggers an alert) ──
+// Compares when each feed first reports a goal, so we can see if the NHL API beats ESPN.
+const srcRace = {};
+let nhlInterval = null, nhlBusy = false, nhlFails = 0, nhlLast = null;
+function srcMark(source, side, score) {
+  const k = side + ':' + score;
+  const rec = srcRace[k] || (srcRace[k] = {});
+  if (rec[source]) return;
+  rec[source] = Date.now();
+  const other = source === 'espn' ? 'nhl' : 'espn';
+  if (rec[other]) {
+    const leadMs = rec[source] - rec[other];
+    addLog('⚡ ' + other.toUpperCase() + ' reported the ' + side + ' goal ' + (leadMs / 1000).toFixed(1) + 's before ' + source.toUpperCase());
+    gameLogEntry('SOURCE_RACE', { side, score, first: other, leadMs });
+  }
+}
+async function pollNhl() {
+  if (nhlBusy) return;
+  nhlBusy = true;
+  try {
+    const r = await fetch('https://api-web.nhle.com/v1/score/now');
+    const d = await r.json();
+    const g = (d.games || []).find(x => x.awayTeam?.abbrev === 'ANA' || x.homeTeam?.abbrev === 'ANA');
+    nhlFails = 0;
+    if (!g) return;
+    const anaAway = g.awayTeam.abbrev === 'ANA';
+    const cur = { ANA: (anaAway ? g.awayTeam : g.homeTeam).score ?? 0, OPP: (anaAway ? g.homeTeam : g.awayTeam).score ?? 0 };
+    if (nhlLast) {
+      for (const side of ['ANA', 'OPP']) if (cur[side] > nhlLast[side]) srcMark('nhl', side, cur[side]);
+    } else {
+      addLog('NHL API connected ✓ (source race logging on)');
+    }
+    nhlLast = cur;
+  } catch (e) {
+    nhlFails++;
+    if (nhlFails === 3) {
+      addLog('NHL API unreachable from this browser — source race logging off');
+      clearInterval(nhlInterval); nhlInterval = null;
+    }
+  } finally { nhlBusy = false; }
+}
+function startNhlRace() {
+  if (nhlInterval) return;
+  nhlFails = 0; nhlLast = null;
+  pollNhl();
+  nhlInterval = setInterval(pollNhl, 1000);
+}
+
 let pollBusy = false, pollBusySince = 0;
 let clockBusy = false, clockBusySince = 0;
 let lastBoxscoreAt = 0, lastPenCheckAt = 0;
@@ -2809,6 +2857,7 @@ async function _poll() {
       const period = ducksGame.periodDescriptor?.number || 1;
       const isOT = period > 3;
       gameLogEntry('API_GOAL', { team: 'ANA', score: currentScore, period });
+      srcMark('espn', 'ANA', currentScore);
       if (isOT && !winFiredThisGame) {
         addLog(`OT GOAL — DUCKS WIN! ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore}`, true);
         winFiredThisGame = true;
@@ -2846,6 +2895,7 @@ async function _poll() {
       if (lastOppScore !== null && oppScore > lastOppScore) {
         addLog(`${oppTeam.abbrev} goal. ${oppTeam.abbrev} ${oppScore} — ANA ${currentScore}`);
         gameLogEntry('API_GOAL', { team: oppTeam.abbrev, score: oppScore });
+        srcMark('espn', 'OPP', oppScore);
         lastOppScore = oppScore; // set BEFORE any await (see ANA goal)
         const detectedAt = Date.now();
         const holdScore = streamDelayMs > 0;
@@ -2887,6 +2937,7 @@ function startWatching() {
   pollInterval = setInterval(poll, 250);
   // Fast clock poll every 3 seconds for sync accuracy
   clockInterval = setInterval(pollClock, 250);
+  startNhlRace();
   if ('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(() => {});
 }
 
@@ -3101,6 +3152,7 @@ function stopWatching() {
   isRunning = false;
   clearInterval(pollInterval); pollInterval = null;
   clearInterval(clockInterval); clockInterval = null;
+  clearInterval(nhlInterval); nhlInterval = null;
   lastDucksScore = null;
   document.getElementById('startBtn').style.display = 'flex';
   document.getElementById('stopBtn').style.display = 'none';

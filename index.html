@@ -1551,17 +1551,31 @@ let clockInterval = null;
 // Compares when each feed first reports a goal, so we can see if the NHL API beats ESPN.
 const srcRace = {};
 let nhlInterval = null, nhlBusy = false, nhlFails = 0, nhlLast = null;
+const SRC_NAME = { espn: 'ESPN scoreboard', pbp: 'ESPN play-by-play', nhl: 'NHL API' };
 function srcMark(source, side, score) {
   const k = side + ':' + score;
   const rec = srcRace[k] || (srcRace[k] = {});
   if (rec[source]) return;
   rec[source] = Date.now();
-  const other = source === 'espn' ? 'nhl' : 'espn';
-  if (rec[other]) {
-    const leadMs = rec[source] - rec[other];
-    addLog('⚡ ' + other.toUpperCase() + ' reported the ' + side + ' goal ' + (leadMs / 1000).toFixed(1) + 's before ' + source.toUpperCase());
-    gameLogEntry('SOURCE_RACE', { side, score, first: other, leadMs });
+  for (const other of Object.keys(rec)) {
+    if (other === source) continue;
+    const leadMs = rec[source] - rec[other];   // how long the earlier source was ahead
+    addLog('⚡ ' + SRC_NAME[other] + ' reported the ' + side + ' goal ' + (leadMs / 1000).toFixed(1) + 's before ' + SRC_NAME[source]);
+    gameLogEntry('SOURCE_RACE', { side, score, first: other, second: source, leadMs });
   }
+}
+// Third source: goals listed in ESPN's play-by-play feed (already fetched every ~1s for penalties)
+let pbpGoalCount = null;
+function pbpGoalWatch(pbp) {
+  if (!pbp || !pbp.plays) return;
+  const anaId = pbp.awayTeam?.abbrev === 'ANA' ? pbp.awayTeam?.id : pbp.homeTeam?.id;
+  const goals = pbp.plays.filter(p => p.typeDescKey === 'goal');
+  const cur = { ANA: goals.filter(g => String(g.details?.eventOwnerTeamId) === String(anaId)).length };
+  cur.OPP = goals.length - cur.ANA;
+  if (pbpGoalCount) {
+    for (const side of ['ANA', 'OPP']) if (cur[side] > pbpGoalCount[side]) srcMark('pbp', side, cur[side]);
+  }
+  pbpGoalCount = cur;
 }
 async function pollNhl() {
   if (nhlBusy) return;
@@ -1590,7 +1604,7 @@ async function pollNhl() {
 }
 function startNhlRace() {
   if (nhlInterval) return;
-  nhlFails = 0; nhlLast = null;
+  nhlFails = 0; nhlLast = null; pbpGoalCount = null;
   pollNhl();
   nhlInterval = setInterval(pollNhl, 1000);
 }
@@ -1604,6 +1618,19 @@ function estApiClockNow() {
   const age = apiChangeAt ? (Date.now() - apiChangeAt) / 1000 : 0;
   const running = apiClockRate !== null && apiClockRate > 0.7 && apiClockRate < 1.3 && age < 15;
   return { secs: running ? Math.max(0, currentApiClockSecs - age) : currentApiClockSecs, raw: currentApiClockSecs, age: Math.round(age * 10) / 10, adjusted: running };
+}
+// Single writer for the API clock: BOTH polls (pollClock and updateScoreDisplay) report it, and whichever
+// sees a new value first must be the one that stamps "when it changed" — otherwise the age is wrong.
+function setApiClock(secs) {
+  if (currentApiClockSecs === null || currentApiClockSecs !== secs) {
+    const nowT = Date.now();
+    if (apiChangeAt !== null && currentApiClockSecs !== null) {
+      const dt = (nowT - apiChangeAt) / 1000;
+      apiClockRate = dt > 0 ? (currentApiClockSecs - secs) / dt : null; // ~1.0 while the clock is running
+    }
+    apiChangeAt = nowT;
+  }
+  currentApiClockSecs = secs;
 }
 function periodStartSecs() { return currentApiPeriod > 3 ? 4 * 60 + 59 : 19 * 60 + 59; } // OT = 5:00 (regular season)
 
@@ -1636,16 +1663,8 @@ async function _pollClock() {
       const parts = clock.split(':');
       if (parts.length === 2) {
         const prevApiSecs = currentApiClockSecs;
-        currentApiClockSecs = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        setApiClock(parseInt(parts[0]) * 60 + parseInt(parts[1]));
         currentApiPeriod = period;
-        if (prevApiSecs === null || prevApiSecs !== currentApiClockSecs) {
-          const nowT = Date.now();
-          if (apiChangeAt !== null && prevApiSecs !== null) {
-            const dt = (nowT - apiChangeAt) / 1000;
-            apiClockRate = dt > 0 ? (prevApiSecs - currentApiClockSecs) / dt : null; // ~1.0 while the clock is running
-          }
-          apiChangeAt = nowT;
-        }
         updateVpClockFromApi(currentApiClockSecs);
 
         // Detect end of regulation: period 3, clock at 0:00, Ducks leading
@@ -2276,7 +2295,7 @@ function updateScoreDisplay(game) {
         // Store as seconds for sync calculation
         const parts = game.displayClock.split(':');
         if (parts.length === 2) {
-          currentApiClockSecs = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+          setApiClock(parseInt(parts[0]) * 60 + parseInt(parts[1]));
         }
       }
     }
@@ -2853,6 +2872,7 @@ async function _poll() {
       lastPenCheckAt = Date.now();
       const penPbp = await fetchPlayByPlay(ducksGame.id);
       if (penPbp) {
+        pbpGoalWatch(penPbp);
         // If this is first poll, seed penalty ID without firing toast
         if (lastPenaltyEventId === null) {
           const pens = (penPbp.plays || []).filter(p => p.typeDescKey === 'penalty');

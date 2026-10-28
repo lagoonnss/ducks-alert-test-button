@@ -1283,7 +1283,7 @@
 
       <div class="help-section">
         <div class="help-section-title">TV Watch (experimental)</div>
-        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and drag the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
+        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and drag the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
       </div>
 
       <div class="help-section">
@@ -1688,7 +1688,7 @@ function setApiClock(secs) {
 }
 function periodStartSecs() { return currentApiPeriod > 3 ? 4 * 60 + 59 : 19 * 60 + 59; } // OT = 5:00 (regular season)
 
-const BUILD_ID = 'dev-2026-10-26a';
+const BUILD_ID = 'dev-2026-10-28b';
 // Goal alerts are driven by ESPN's SCORE, which trails the game clock by ~10-20 s, and the stream delay is tuned
 // against that lag. The 0:00 end-of-game trigger is driven by the CLOCK (no such lag), so it needs this extra time.
 const END_GAME_EXTRA_MS = 18000;
@@ -2447,6 +2447,10 @@ function hideMascot() {
 }
 
 let lastOppScore = null;
+// ESPN sometimes serves a stale/lower score for a poll or two. Without this guard the jump back up looked like a NEW goal
+// (that produced a second, phantom Ducks alert on Oct 27). A lower score is only accepted once it has held this long.
+const SCORE_DIP_MS = 20000;
+const dipSince = { ANA: null, OPP: null };
 
 function findLatestOppGoal(pbp, oppAbbr) {
   if (!pbp || !pbp.plays) return null;
@@ -2996,6 +3000,7 @@ async function _poll() {
       } catch(e) {}
       addLog(`Tracking: ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore}`);
     } else if (currentScore > lastDucksScore) {
+      dipSince.ANA = null;
       lastDucksScore = currentScore; // set BEFORE any await so a overlapping poll can't re-detect this goal
       const detectedAt = Date.now();
       const period = ducksGame.periodDescriptor?.number || 1;
@@ -3037,9 +3042,14 @@ async function _poll() {
         }
       }
     } else if (currentScore < lastDucksScore) {
-      addLog(`Score corrected: ANA ${currentScore}`);
-      lastDucksScore = currentScore;
+      if (!dipSince.ANA) { dipSince.ANA = Date.now(); gameLogEntry('SCORE_DIP', { team: 'ANA', feedShows: currentScore, appHolds: lastDucksScore }); addLog(`ESPN briefly shows ANA ${currentScore} (was ${lastDucksScore}) — ignoring unless it holds`); }
+      if (Date.now() - dipSince.ANA >= SCORE_DIP_MS) {
+        addLog(`Score corrected: ANA ${currentScore}`);
+        gameLogEntry('SCORE_CORRECTED', { team: 'ANA', score: currentScore });
+        lastDucksScore = currentScore; dipSince.ANA = null;
+      }
     } else {
+      dipSince.ANA = null;
       // Check if opponent scored
       if (lastOppScore !== null && oppScore > lastOppScore) {
         addLog(`${oppTeam.abbrev} goal. ${oppTeam.abbrev} ${oppScore} — ANA ${currentScore}`);
@@ -3070,6 +3080,10 @@ async function _poll() {
         }
       } else {
         if (lastOppScore === null) lastOppScore = oppScore;
+        if (oppScore < lastOppScore) {          // same stale-score guard for the opponent
+          if (!dipSince.OPP) { dipSince.OPP = Date.now(); gameLogEntry('SCORE_DIP', { team: 'OPP', feedShows: oppScore, appHolds: lastOppScore }); }
+          if (Date.now() - dipSince.OPP >= SCORE_DIP_MS) { gameLogEntry('SCORE_CORRECTED', { team: 'OPP', score: oppScore }); addLog(`Score corrected: ${oppTeam.abbrev} ${oppScore}`); lastOppScore = oppScore; dipSince.OPP = null; }
+        } else dipSince.OPP = null;
         addLog(`ANA ${currentScore} — ${oppTeam.abbrev} ${oppScore} · no change`);
       }
     }
@@ -3379,12 +3393,12 @@ function tvDist(a, b) { return tvDistZ(tvZ(a), tvShifts(b)); }
 
 function TvCore(cfg) {
   this.cfg = Object.assign({ thrMin: 0.035, confirmFrames: 8, needChanged: 7, anchorMin: 0.5,
-                             baselineFrames: 15, cooldownMs: 3000 }, cfg || {});
+                             baselineFrames: 15, cooldownMs: 3000, settleMs: 5000 }, cfg || {});
   this.reset();
 }
 TvCore.prototype.reset = function () {
   this.base = null; this.ref = null; this.acc = null; this.stable = 0;
-  this.hist = []; this.vis = null; this.noise = 0.012; this.coolUntil = { ANA: 0, OPP: 0 };
+  this.hist = []; this.vis = null; this.settleUntil = 0; this.noise = 0.012; this.coolUntil = { ANA: 0, OPP: 0 };
   this.tmplHist = { ANA: [], OPP: [] }; this.dbg = {};
 };
 TvCore.prototype.thr = function () { return Math.min(0.15, Math.max(this.cfg.thrMin, this.noise * 3)); };
@@ -3427,7 +3441,7 @@ TvCore.prototype.step = function (f, t) {
     this.hist = [];
     return ev;
   }
-  if (this.vis === false) { this.vis = true; ev.push({ type: 'visible' }); }
+  if (this.vis === false) { this.vis = true; this.settleUntil = t + c.settleMs; ev.push({ type: 'visible' }); }   // let the bar's return animation finish
 
   const dA = tvDistZ(zA, this.base.shA), dO = tvDistZ(zO, this.base.shO);
   const thr = this.thr();
@@ -3464,25 +3478,26 @@ TvCore.prototype.step = function (f, t) {
     this._setBase(newA, newO, this.base.ancZ);
     this.tmplHist = { ANA: [this.base.ana], OPP: [this.base.opp] };
     this.hist = []; this.holdN = 0;
-    ev.push({ type: 'rebase', reason: 'both digits changed' });
+    ev.push({ type: 'rebase', reason: 'both digits changed', dA: last.dA, dO: last.dO });
     return ev;
   }
   // the other digit is also on its way to changing: a graphic/skin change, not a goal — wait to see (up to ~1.5 s)
   const otherKey = confA ? 'dO' : 'dA';
   if (H.slice(-4).some(h => h[otherKey] > thr * 0.7) && (this.holdN = (this.holdN || 0) + 1) < 15) return ev;
   this.holdN = 0;
+  if (t < this.settleUntil) return ev;           // bar only just came back: wait for its animation to settle
   const team = confA ? 'ANA' : 'OPP';
   if (t < this.coolUntil[team]) return ev;
   const newG = confA ? newA : newO;
   const th = this.tmplHist[team];
   const isRevert = th.length >= 2 && tvDist(newG, th[th.length - 2]) < thr * 0.6;   // score went back = goal overturned
-  const b = this.base;
+  const b = this.base; const beforeG = Float32Array.from(confA ? b.ana : b.opp);
   if (confA) { b.ana = newA; b.shA = tvShifts(newA); b.conA = tvContrast(newA); } else { b.opp = newO; b.shO = tvShifts(newO); b.conO = tvContrast(newO); }
   this.hist = [];
-  if (isRevert) { th.pop(); ev.push({ type: 'revert', team }); return ev; }
+  if (isRevert) { th.pop(); ev.push({ type: 'revert', team, before: beforeG, after: newG }); return ev; }
   th.push(newG); if (th.length > 4) th.shift();
   this.coolUntil[team] = t + c.cooldownMs;
-  ev.push({ type: 'goal', team, diff: confA ? dA : dO });
+  ev.push({ type: 'goal', team, diff: confA ? dA : dO, before: beforeG, after: newG });
   return ev;
 };
 
@@ -3496,8 +3511,17 @@ const tvw = {
   boxes: { ana: { x: 0.36, y: 0.30, w: 0.06, h: 0.12 }, anc: { x: 0.44, y: 0.30, w: 0.06, h: 0.12 }, opp: { x: 0.56, y: 0.30, w: 0.06, h: 0.12 } },
   pend: { ANA: [], OPP: [] },     // camera saw it, ESPN has not confirmed yet
   ahead: { ANA: [], OPP: [] },    // ESPN alerted first, camera has not shown it yet
-  cv: null, cx: null, lastLogAt: 0, lastUiAt: 0, lastVis: null
+  cv: null, cx: null, lastLogAt: 0, lastUiAt: 0, lastVis: null,
+  trust: { matches: 0, lastBad: 0 },          // LIVE only fires once the camera has matched a real goal and been quiet
+  frozenAt: 0, lastCT: -1, lastCTAt: 0, sameN: 0, lastSig: null, lastRestartAt: 0, hiddenAt: 0, camLabel: ''
 };
+const TVW_MATCH_MS = 90000, TVW_QUIET_MS = 600000;
+function tvwArmed() { return tvw.mode === 'live' && tvw.trust.matches >= 1 && Date.now() - tvw.trust.lastBad > TVW_QUIET_MS; }
+function tvwB64(g) {   // a 24x32 grey picture as a short string, so the log can show what the camera saw
+  const b = new Uint8Array(g.length); for (let i = 0; i < g.length; i++) b[i] = Math.max(0, Math.min(255, Math.round(g[i])));
+  let s = ''; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+  return btoa(s);
+}
 let camCtx = { ana: 0, opp: 0, oppAbbr: 'OPP' };   // latest ESPN score, kept by _poll()
 try {
   const b = JSON.parse(localStorage.getItem('ducksTvwBoxes') || 'null'); if (b && b.ana && b.opp && b.anc) tvw.boxes = b;
@@ -3510,14 +3534,18 @@ function tvwSave() { try { localStorage.setItem('ducksTvwBoxes', JSON.stringify(
 function tvwUi() {
   const st = document.getElementById('tvwStatus'), dbg = document.getElementById('tvwDbg');
   const sb = document.getElementById('tvwStartBtn'), mb = document.getElementById('tvwModeBtn');
-  if (mb) { mb.textContent = tvw.mode === 'live' ? 'Mode: LIVE — fires alerts' : 'Mode: SHADOW — log only'; mb.style.color = tvw.mode === 'live' ? '#22c55e' : '#facc15'; }
+  if (mb) {
+    const armed = tvwArmed();
+    mb.textContent = tvw.mode === 'live' ? (armed ? 'Mode: LIVE — armed, fires alerts' : 'Mode: LIVE — not armed yet (logging only)') : 'Mode: SHADOW — log only';
+    mb.style.color = tvw.mode === 'live' ? (armed ? '#22c55e' : '#fb923c') : '#facc15';
+  }
   if (sb) sb.textContent = tvw.running ? '■ Stop camera' : '▶ Start camera';
   if (!st) return;
   if (!tvw.running) { st.textContent = 'Off'; if (dbg) dbg.textContent = '—'; return; }
   const c = tvw.core, d = c ? c.dbg : {};
   if (!c || !c.base) { st.textContent = 'Learning the score bar…'; if (dbg) dbg.textContent = 'Hold still: the score bar must be visible and steady for ~2 s'; return; }
-  st.textContent = c.vis === false ? 'Score bar hidden' : 'Watching';
-  if (dbg && d.ncc !== undefined) dbg.textContent = 'bar match ' + d.ncc.toFixed(2) + (d.dA !== undefined ? ' · Ducks Δ' + d.dA.toFixed(2) + ' · Opp Δ' + d.dO.toFixed(2) + ' · trigger at ' + d.thr.toFixed(2) : '');
+  st.textContent = tvw.frozenAt ? 'Camera frozen — restarting…' : (c.vis === false ? 'Score bar hidden' : 'Watching');
+  if (dbg && d.ncc !== undefined) dbg.textContent = (tvw.camLabel ? tvw.camLabel + ' · ' : '') + 'matched goals ' + tvw.trust.matches + ' · bar match ' + d.ncc.toFixed(2) + (d.dA !== undefined ? ' · Ducks Δ' + d.dA.toFixed(2) + ' · Opp Δ' + d.dO.toFixed(2) + ' · trigger at ' + d.thr.toFixed(2) : '');
 }
 
 async function tvwStartStream() {
@@ -3536,6 +3564,12 @@ async function tvwStartStream() {
   const v = document.getElementById('tvwVideo');
   v.srcObject = tvw.stream; v.muted = true; v.setAttribute('playsinline', '');
   await v.play();
+  try {
+    const tr = tvw.stream.getVideoTracks()[0], st = tr.getSettings();
+    tvw.camLabel = tr.label || '(unnamed camera)';
+    gameLogEntry('CAM_USING', { label: tvw.camLabel, w: st.width, h: st.height, fps: st.frameRate, id: (st.deviceId || '').slice(0, 8), facing: st.facingMode || '' });
+  } catch (e) {}
+  tvw.lastCT = -1; tvw.lastCTAt = Date.now(); tvw.sameN = 0; tvw.lastSig = null; tvw.frozenAt = 0;
   const fit = () => { if (v.videoWidth) document.getElementById('tvwWrap').style.setProperty('--ar', v.videoWidth / v.videoHeight); };
   v.onloadedmetadata = fit; fit();
 }
@@ -3591,24 +3625,48 @@ function tvwSample(box) {
   for (let i = 0; i < TVW_N; i++) g[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
   return g;
 }
+// a live camera's clock keeps moving and its picture never repeats exactly (sensor noise); if either stops, it is frozen
+function tvwWatchdog(v, now, f) {
+  if (v.currentTime !== tvw.lastCT) { tvw.lastCT = v.currentTime; tvw.lastCTAt = now; }
+  if (f) {
+    let sig = 0; for (let i = 0; i < TVW_N; i += 7) sig += f.ana[i] * (i + 1) + f.opp[i] * (i + 2) + f.anc[i] * (i + 3);
+    tvw.sameN = (sig === tvw.lastSig) ? tvw.sameN + 1 : 0; tvw.lastSig = sig;
+  }
+  const stuck = (now - tvw.lastCTAt > 4000) || tvw.sameN > 80;
+  if (!stuck) { if (tvw.frozenAt) { tvw.frozenAt = 0; gameLogEntry('CAM_RECOVERED', {}); addLog('📷 Camera picture is moving again'); } return false; }
+  if (!tvw.frozenAt) {
+    tvw.frozenAt = now; gameLogEntry('CAM_FROZEN', { sameFrames: tvw.sameN, clockStalledMs: now - tvw.lastCTAt });
+    addLog('📷 Camera picture froze — trying to restart it', false, true);
+    try { v.play().catch(() => {}); } catch (e) {}
+  } else if (now - tvw.frozenAt > 4000 && now - tvw.lastRestartAt > 15000) {
+    tvw.lastRestartAt = now; gameLogEntry('CAM_RESTART', {});
+    tvwStartStream().then(() => { if (tvw.core) tvw.core.reset(); }).catch(e => addLog('📷 Camera restart failed: ' + e.message, false, true));
+  }
+  return true;
+}
 function tvwTick() {
   try {
     const v = document.getElementById('tvwVideo');
-    if (!tvw.running || !v || !v.videoWidth || v.readyState < 2) return;
+    if (!tvw.running || !v) return;
     const now = Date.now();
-    const f = { ana: tvwSample(tvw.boxes.ana), opp: tvwSample(tvw.boxes.opp), anc: tvwSample(tvw.boxes.anc) };
-    for (const e of tvw.core.step(f, now)) tvwEvent(e, now);
+    const ready = v.videoWidth && v.readyState >= 2;
+    const f = ready ? { ana: tvwSample(tvw.boxes.ana), opp: tvwSample(tvw.boxes.opp), anc: tvwSample(tvw.boxes.anc) } : null;
+    const frozen = tvwWatchdog(v, now, f);
+    if (!frozen && f) for (const e of tvw.core.step(f, now)) tvwEvent(e, now);
     if (now - tvw.lastUiAt > 400) { tvw.lastUiAt = now; tvwUi(); }
-    if (now - tvw.lastLogAt > 60000 && tvw.core.base) { tvw.lastLogAt = now; const d = tvw.core.dbg; gameLogEntry('CAM_DBG', { ncc: +(d.ncc || 0).toFixed(2), dA: +(d.dA || 0).toFixed(3), dO: +(d.dO || 0).toFixed(3), thr: +(d.thr || 0).toFixed(3), visible: tvw.core.vis }); }
+    if (now - tvw.lastLogAt > 60000 && tvw.core.base) { tvw.lastLogAt = now; const d = tvw.core.dbg; gameLogEntry('CAM_DBG', { ncc: +(d.ncc || 0).toFixed(2), dA: +(d.dA || 0).toFixed(3), dO: +(d.dO || 0).toFixed(3), thr: +(d.thr || 0).toFixed(3), visible: tvw.core.vis, frozen: !!tvw.frozenAt, armed: tvwArmed(), matches: tvw.trust.matches }); }
   } catch (e) { gameLogEntry('CAM_ERROR', { msg: String(e && e.message || e) }); }
 }
 function tvwEvent(e, now) {
   if (e.type === 'baseline') { gameLogEntry('CAM_BASELINE', {}); addLog('📷 Score bar learned — watching for score changes'); }
-  else if (e.type === 'hidden') { gameLogEntry('CAM_BUG', { visible: false }); addLog('📷 Score bar not visible (replay / commercial / camera moved)'); }
-  else if (e.type === 'visible') { gameLogEntry('CAM_BUG', { visible: true }); addLog('📷 Score bar back'); }
-  else if (e.type === 'rebase') { gameLogEntry('CAM_REBASE', { reason: e.reason }); addLog('📷 Score bar changed look — re-learned, no alert'); }
-  else if (e.type === 'revert') { gameLogEntry('CAM_REVERT', { team: e.team }); addLog('📷 ' + e.team + ' score went back (goal overturned?) — no alert'); }
-  else if (e.type === 'goal') tvwGoal(e.team, { diff: e.diff });
+  else if (e.type === 'hidden') { tvw.hiddenAt = now; }
+  else if (e.type === 'visible') {                       // only log bar gaps that last a couple of seconds (brief flickers are noise)
+    const gone = now - (tvw.hiddenAt || now);
+    if (gone >= 2000) { gameLogEntry('CAM_BUG', { hiddenForMs: gone }); addLog('📷 Score bar was away ' + Math.round(gone / 1000) + 's (replay / commercial) — back'); }
+  }
+  else if (e.type === 'rebase') { gameLogEntry('CAM_REBASE', { reason: e.reason, dA: +(e.dA || 0).toFixed(2), dO: +(e.dO || 0).toFixed(2) }); addLog('📷 Score bar changed look — re-learned, no alert'); }
+  else if (e.type === 'revert') { gameLogEntry('CAM_REVERT', { team: e.team, before: tvwB64(e.before), after: tvwB64(e.after) }); addLog('📷 ' + e.team + ' score went back — no alert'); }
+  else if (e.type === 'goal') tvwGoal(e.team, { diff: e.diff, before: e.before, after: e.after });
 }
 
 // ---- reconcile camera events with ESPN so a goal never alerts twice ----
@@ -3616,6 +3674,7 @@ function tvwSweep() {
   const cut = Date.now() - 150000;
   for (const team of ['ANA', 'OPP']) {
     tvw.pend[team] = tvw.pend[team].filter(e => { if (e.t < cut) {
+        tvw.trust.lastBad = Date.now(); tvw.trust.matches = 0;     // a false alarm: LIVE stays locked until it is quiet again
         gameLogEntry('CAM_UNCONFIRMED', { team, live: e.live }); addLog('📷 ESPN never confirmed the camera ' + team + ' goal — possible false alarm', false, true);
         if (e.live && tvw.mode === 'live') { tvw.mode = 'shadow'; tvwSave(); tvwUi(); gameLogEntry('CAM_MODE', { mode: 'shadow', auto: true }); addLog('📷 Switched back to SHADOW — check that the score boxes are tight on the digits only (not the shots-on-goal numbers)', false, true); }
         return false; } return true; });
@@ -3627,14 +3686,16 @@ function tvwGoal(team, info) {
   const now = Date.now(), ah = tvw.ahead[team];
   if (ah.length) {                         // ESPN already alerted for this goal: the TV just caught up
     const a = ah.shift();
-    gameLogEntry('CAM_AFTER_ESPN', { team, camSawAfterEspnMs: now - a });
+    const matched = now - a <= TVW_MATCH_MS; if (matched) { tvw.trust.matches++; tvwUi(); }
+    gameLogEntry('CAM_AFTER_ESPN', { team, camSawAfterEspnMs: now - a, matched });
     addLog('📷 TV showed the ' + team + ' goal ' + Math.round((now - a) / 100) / 10 + 's after the app detected it');
     return;
   }
-  const live = tvw.mode === 'live';
-  gameLogEntry('CAM_GOAL', { team, live, diff: info && info.diff, test: !!(info && info.test) });
+  const live = tvwArmed();
+  gameLogEntry('CAM_GOAL', { team, live, mode: tvw.mode, armed: live, matches: tvw.trust.matches, diff: info && info.diff, test: !!(info && info.test),
+    before: info && info.before ? tvwB64(info.before) : undefined, after: info && info.after ? tvwB64(info.after) : undefined });
   tvw.pend[team].push({ t: now, live });
-  if (!live) { addLog('📷 [shadow] TV shows a ' + team + ' goal — logged only'); return; }
+  if (!live) { addLog('📷 [' + (tvw.mode === 'live' ? 'LIVE not armed yet' : 'shadow') + '] TV shows a ' + team + ' goal — logged only'); return; }
   addLog('📷 TV shows a ' + (team === 'ANA' ? 'DUCKS GOAL' : 'goal for ' + camCtx.oppAbbr) + ' — firing now', team === 'ANA');
   safeStep('cam score', applyCamScore);
   if (team === 'ANA') _fireGoalAlert(null);
@@ -3649,7 +3710,8 @@ function camConsume(team, game) {
   tvwSweep();
   const arr = tvw.pend[team]; if (!arr.length) return false;
   const e = arr.shift(), lag = Date.now() - e.t;
-  gameLogEntry('CAM_CONFIRMED', { team, espnBehindCamMs: lag, live: e.live });
+  const matched = lag <= TVW_MATCH_MS; if (matched) { tvw.trust.matches++; tvwUi(); }
+  gameLogEntry('CAM_CONFIRMED', { team, espnBehindCamMs: lag, live: e.live, matched });
   addLog('📷 ESPN confirmed the ' + team + ' goal ' + Math.round(lag / 100) / 10 + 's after the camera saw it');
   if (!e.live) { tvw.noNote = team; return false; }   // shadow: the camera did not alert, so the normal ESPN alert still runs
   safeStep('score', () => updateScoreDisplay(game));
@@ -3701,6 +3763,7 @@ function tvwDrawBoxes() {
   }
 }
 document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && tvw.running && 'wakeLock' in navigator) navigator.wakeLock.request('screen').catch(() => {});
   if (!document.hidden && tvw.running && tvw.stream) {
     const t = tvw.stream.getVideoTracks()[0];
     if (!t || t.readyState === 'ended') tvwStartStream().catch(e => addLog('📷 Camera lost: ' + e.message, false, true));

@@ -1283,7 +1283,7 @@
 
       <div class="help-section">
         <div class="help-section-title">TV Watch (experimental)</div>
-        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and drag the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Then tap <strong>▶ Start camera</strong>. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice. If the score bar disappears (replays, commercials) the camera waits for it to come back. Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
+        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and drag the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice. If the score bar disappears (replays, commercials) the camera waits for it to come back. Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
       </div>
 
       <div class="help-section">
@@ -1317,7 +1317,7 @@
 <div id="tvwStage" class="tvw-bg">
   <div class="tvw-bar">
     <strong>TV Watch set-up.</strong> Aim so the whole score bar is in view and the iPad stays put. Drag each box onto its target and pull the round handle to size it:
-    <span style="color:#facc15">yellow = Ducks score digit</span>, <span style="color:#fb923c">orange = opponent score digit</span>, <span style="color:#60a5fa">blue = the Ducks logo</span>.
+    <span style="color:#facc15">yellow = Ducks score digit</span>, <span style="color:#fb923c">orange = opponent score digit</span>, <span style="color:#60a5fa">blue = any part of the bar that never changes (the Ducks logo)</span>.
     Keep the digit boxes snug with a little margin — leave out the shots-on-goal numbers underneath.
     <button class="vp-start-btn" onclick="tvwCloseSetup()" style="margin-top:6px;width:100%;">✓ Done</button>
   </div>
@@ -3489,7 +3489,7 @@ const tvw = {
   core: null, stream: null, timer: null, running: false, setupOpen: false,
   mode: 'shadow',                 // 'shadow' = log only, 'live' = fire alerts
   facing: 'environment',
-  boxes: { ana: { x: 0.40, y: 0.30, w: 0.07, h: 0.12 }, opp: { x: 0.53, y: 0.30, w: 0.07, h: 0.12 }, anc: { x: 0.28, y: 0.26, w: 0.10, h: 0.20 } },
+  boxes: { ana: { x: 0.36, y: 0.30, w: 0.06, h: 0.12 }, anc: { x: 0.44, y: 0.30, w: 0.06, h: 0.12 }, opp: { x: 0.56, y: 0.30, w: 0.06, h: 0.12 } },
   pend: { ANA: [], OPP: [] },     // camera saw it, ESPN has not confirmed yet
   ahead: { ANA: [], OPP: [] },    // ESPN alerted first, camera has not shown it yet
   cv: null, cx: null, lastLogAt: 0, lastUiAt: 0, lastVis: null
@@ -3584,7 +3584,10 @@ function tvwEvent(e, now) {
 function tvwSweep() {
   const cut = Date.now() - 150000;
   for (const team of ['ANA', 'OPP']) {
-    tvw.pend[team] = tvw.pend[team].filter(e => { if (e.t < cut) { gameLogEntry('CAM_UNCONFIRMED', { team, live: e.live }); addLog('📷 ESPN never confirmed the camera ' + team + ' goal — possible false alarm', false, true); return false; } return true; });
+    tvw.pend[team] = tvw.pend[team].filter(e => { if (e.t < cut) {
+        gameLogEntry('CAM_UNCONFIRMED', { team, live: e.live }); addLog('📷 ESPN never confirmed the camera ' + team + ' goal — possible false alarm', false, true);
+        if (e.live && tvw.mode === 'live') { tvw.mode = 'shadow'; tvwSave(); tvwUi(); gameLogEntry('CAM_MODE', { mode: 'shadow', auto: true }); addLog('📷 Switched back to SHADOW — check that the score boxes are tight on the digits only (not the shots-on-goal numbers)', false, true); }
+        return false; } return true; });
     tvw.ahead[team] = tvw.ahead[team].filter(t => { if (t < cut) { gameLogEntry('CAM_MISSED', { team }); addLog('📷 ESPN reported a ' + team + ' goal the camera never saw', false, true); return false; } return true; });
   }
 }
@@ -3607,9 +3610,7 @@ function tvwGoal(team, info) {
   else fireOppAlert(camCtx.oppAbbr, camCtx.opp + tvw.pend.OPP.filter(e => e.live).length, null);
 }
 function applyCamScore() {
-  const pa = tvw.pend.ANA.filter(e => e.live).length, po = tvw.pend.OPP.filter(e => e.live).length;
-  if (pa) document.getElementById('ducksScore').textContent = camCtx.ana + pa;
-  if (po) document.getElementById('oppScore').textContent = camCtx.opp + po;
+  // intentionally empty: the score on screen comes from the ESPN feed only; the camera just triggers the alert
 }
 // called by the ESPN goal paths. true = the camera already fired this alert, so skip the ESPN one.
 function camConsume(team, game) {

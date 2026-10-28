@@ -1283,7 +1283,7 @@
 
       <div class="help-section">
         <div class="help-section-title">TV Watch (experimental)</div>
-        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and drag the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice. If the score bar disappears (replays, commercials) the camera waits for it to come back. Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
+        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and drag the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
       </div>
 
       <div class="help-section">
@@ -1540,6 +1540,10 @@
       <button class="vp-start-btn" id="tvwModeBtn" onclick="tvwToggleMode()" style="background:#1c1f24;border:1px solid rgba(255,255,255,0.2);color:#facc15;flex:2;">Mode: SHADOW — log only</button>
       <button class="vp-start-btn" onclick="tvwRebaseline()" style="background:#1c1f24;border:1px solid rgba(255,255,255,0.2);color:var(--muted);">↺ Re-learn</button>
       <button class="vp-start-btn" onclick="tvwFlip()" style="background:#1c1f24;border:1px solid rgba(255,255,255,0.2);color:var(--muted);">🔄 Cam</button>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+      <span style="font-size:9px;color:var(--muted);font-family:'Barlow Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase;">Camera:</span>
+      <select id="tvwCamSel" onchange="tvwPickCam(this.value)" style="flex:1;background:#1c1f24;color:#e5e7eb;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:6px;font-size:12px;"><option value="">Start the camera to list cameras</option></select>
     </div>
     <div id="tvwDbg" style="font-size:11px;color:var(--muted);margin:6px 0 2px;font-family:'Barlow',sans-serif;">—</div>
     <div style="display:flex;gap:4px;align-items:center;">
@@ -3488,7 +3492,7 @@ TvCore.prototype.step = function (f, t) {
 const tvw = {
   core: null, stream: null, timer: null, running: false, setupOpen: false,
   mode: 'shadow',                 // 'shadow' = log only, 'live' = fire alerts
-  facing: 'environment',
+  facing: 'environment', deviceId: '',
   boxes: { ana: { x: 0.36, y: 0.30, w: 0.06, h: 0.12 }, anc: { x: 0.44, y: 0.30, w: 0.06, h: 0.12 }, opp: { x: 0.56, y: 0.30, w: 0.06, h: 0.12 } },
   pend: { ANA: [], OPP: [] },     // camera saw it, ESPN has not confirmed yet
   ahead: { ANA: [], OPP: [] },    // ESPN alerted first, camera has not shown it yet
@@ -3499,8 +3503,9 @@ try {
   const b = JSON.parse(localStorage.getItem('ducksTvwBoxes') || 'null'); if (b && b.ana && b.opp && b.anc) tvw.boxes = b;
   const m = localStorage.getItem('ducksTvwMode'); if (m === 'live' || m === 'shadow') tvw.mode = m;
   const fc = localStorage.getItem('ducksTvwFacing'); if (fc === 'user' || fc === 'environment') tvw.facing = fc;
+  tvw.deviceId = localStorage.getItem('ducksTvwDevice') || '';
 } catch (e) {}
-function tvwSave() { try { localStorage.setItem('ducksTvwBoxes', JSON.stringify(tvw.boxes)); localStorage.setItem('ducksTvwMode', tvw.mode); localStorage.setItem('ducksTvwFacing', tvw.facing); } catch (e) {} }
+function tvwSave() { try { localStorage.setItem('ducksTvwBoxes', JSON.stringify(tvw.boxes)); localStorage.setItem('ducksTvwMode', tvw.mode); localStorage.setItem('ducksTvwFacing', tvw.facing); localStorage.setItem('ducksTvwDevice', tvw.deviceId || ''); } catch (e) {} }
 
 function tvwUi() {
   const st = document.getElementById('tvwStatus'), dbg = document.getElementById('tvwDbg');
@@ -3518,7 +3523,16 @@ function tvwUi() {
 async function tvwStartStream() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('Camera not available in this browser');
   if (tvw.stream) { try { tvw.stream.getTracks().forEach(t => t.stop()); } catch (e) {} }
-  tvw.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: tvw.facing }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+  const size = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+  try {
+    tvw.stream = await navigator.mediaDevices.getUserMedia({ video: tvw.deviceId ? { deviceId: { exact: tvw.deviceId }, ...size } : { facingMode: { ideal: tvw.facing }, ...size }, audio: false });
+  } catch (e) {
+    if (!tvw.deviceId) throw e;
+    addLog('📷 Chosen camera not available — using the default camera', false, true);
+    tvw.deviceId = ''; tvwSave();
+    tvw.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: tvw.facing }, ...size }, audio: false });
+  }
+  tvwListCams();
   const v = document.getElementById('tvwVideo');
   v.srcObject = tvw.stream; v.muted = true; v.setAttribute('playsinline', '');
   await v.play();
@@ -3551,7 +3565,24 @@ function tvwToggleMode() {
   gameLogEntry('CAM_MODE', { mode: tvw.mode }); addLog('📷 TV Watch mode: ' + (tvw.mode === 'live' ? 'LIVE — camera goals fire alerts' : 'SHADOW — logging only'));
 }
 function tvwRebaseline() { if (tvw.core) { tvw.core.reset(); addLog('📷 Re-learning the score bar — keep the score bar visible'); gameLogEntry('CAM_REBASELINE', {}); tvwUi(); } }
-function tvwFlip() { tvw.facing = tvw.facing === 'environment' ? 'user' : 'environment'; tvwSave(); if (tvw.running) tvwStartStream().catch(e => addLog('📷 ' + e.message, false, true)); }
+async function tvwListCams() {
+  const sel = document.getElementById('tvwCamSel'); if (!sel || !navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
+  try {
+    const cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    const cur = (tvw.stream && tvw.stream.getVideoTracks()[0] && tvw.stream.getVideoTracks()[0].getSettings().deviceId) || tvw.deviceId || '';
+    sel.innerHTML = '';
+    if (!cams.length) { sel.innerHTML = '<option value="">No cameras found</option>'; return; }
+    cams.forEach((d, i) => { const o = document.createElement('option'); o.value = d.deviceId; o.textContent = d.label || ('Camera ' + (i + 1)); if (d.deviceId === cur) o.selected = true; sel.appendChild(o); });
+    gameLogEntry('CAM_LIST', { cams: cams.map(d => d.label || '(unnamed)') });
+  } catch (e) {}
+}
+function tvwPickCam(id) {
+  tvw.deviceId = id; tvwSave();
+  gameLogEntry('CAM_PICK', { deviceId: id ? id.slice(0, 8) : '' }); addLog('📷 Camera chosen: ' + (document.getElementById('tvwCamSel').selectedOptions[0] || {}).textContent);
+  if (tvw.running) { tvwStartStream().then(() => { if (tvw.core) tvw.core.reset(); }).catch(e => addLog('📷 ' + e.message, false, true)); }
+}
+if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener('devicechange', () => tvwListCams());
+function tvwFlip() { tvw.deviceId = ''; tvw.facing = tvw.facing === 'environment' ? 'user' : 'environment'; tvwSave(); if (tvw.running) tvwStartStream().catch(e => addLog('📷 ' + e.message, false, true)); }
 
 function tvwSample(box) {
   const v = document.getElementById('tvwVideo'), vw = v.videoWidth, vh = v.videoHeight;

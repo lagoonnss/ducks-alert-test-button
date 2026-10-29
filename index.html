@@ -1223,14 +1223,24 @@
   .tvw-bg { position:fixed; right:0; bottom:0; width:2px; height:2px; overflow:hidden; opacity:0.02; pointer-events:none; z-index:-1; }
   .tvw-full { position:fixed; inset:0; background:#000; z-index:5000; display:flex; flex-direction:column; align-items:center; }
   #tvwWrap { position:relative; width:100%; aspect-ratio:var(--ar,1.7778); max-height:calc(100vh - 150px); }
-  .tvw-full #tvwWrap { width:min(100vw, calc((100vh - 150px) * var(--ar,1.7778))); margin-top:8px; }
+  .tvw-full #tvwView { flex:1; min-height:0; width:100%; position:relative; overflow:hidden; touch-action:none; }
+  .tvw-full #tvwWrap { position:absolute; left:0; top:0; margin:0; max-height:none; transform-origin:0 0; }
   #tvwVideo { width:100%; height:100%; display:block; background:#111; object-fit:fill; }
   #tvwBoxes { position:absolute; inset:0; touch-action:none; }
-  .tvw-bg #tvwBoxes, .tvw-bg .tvw-bar { display:none; }
-  .tvw-rect { position:absolute; border:3px solid; box-sizing:border-box; touch-action:none; cursor:move; }
-  .tvw-lbl { position:absolute; left:-3px; top:-20px; font:700 11px 'Barlow Condensed',sans-serif; color:#000; padding:1px 6px; white-space:nowrap; border-radius:3px; }
-  .tvw-h { position:absolute; right:-12px; bottom:-12px; width:26px; height:26px; border-radius:50%; opacity:.9; }
-  .tvw-bar { color:#e5e7eb; font:13px 'Barlow',sans-serif; padding:8px 14px; width:100%; max-width:760px; }
+  .tvw-bg #tvwBoxes, .tvw-bg .tvw-bar, .tvw-bg #tvwTools { display:none; }
+  .tvw-rect { position:absolute; border:solid; border-width:calc(3px * var(--inv,1)); box-sizing:border-box; touch-action:none; cursor:move; }
+  .tvw-rect.sel { box-shadow:0 0 0 calc(2px * var(--inv,1)) #fff; }
+  .tvw-lbl { position:absolute; left:0; top:0; transform-origin:0 100%; transform:translateY(-100%) scale(var(--inv,1)); font:700 13px 'Barlow Condensed',sans-serif; color:#000; padding:1px 6px; white-space:nowrap; border-radius:3px; pointer-events:none; }
+  .tvw-h { position:absolute; left:100%; top:100%; width:34px; height:34px; border-radius:50%; opacity:.9; transform-origin:0 0; transform:scale(var(--inv,1)) translate(-50%,-50%); }
+  .tvw-bar { color:#e5e7eb; font:13px 'Barlow',sans-serif; padding:6px 14px; width:100%; max-width:900px; }
+  #tvwTools { width:100%; max-width:900px; padding:6px 10px 10px; display:flex; flex-direction:column; gap:6px; align-items:center; }
+  #tvwTools .tvw-row { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; align-items:center; }
+  #tvwTools .tvw-grp { display:flex; gap:4px; align-items:center; color:#9ca3af; font:600 12px 'Barlow',sans-serif; }
+  #tvwTools button { min-width:44px; min-height:44px; background:#1c1f24; color:#e5e7eb; border:1px solid #3b4048; border-radius:8px; font:600 17px 'Barlow',sans-serif; touch-action:manipulation; }
+  #tvwTools button:active { background:#2b3038; }
+  #tvwTools .tvw-chip { display:flex; align-items:center; gap:8px; padding:3px 10px 3px 4px; border:2px solid var(--c); font-size:13px; }
+  #tvwTools .tvw-chip.on { background:#2b3038; box-shadow:0 0 0 2px var(--c); }
+  #tvwTools .tvw-chip canvas { width:36px; height:48px; background:#111; border-radius:4px; }
 </style>
 
 </head>
@@ -1283,7 +1293,7 @@
 
       <div class="help-section">
         <div class="help-section-title">TV Watch (experimental)</div>
-        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and drag the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
+        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and place the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Tap a box button to select it and zoom in, then drag the box or use the arrow, width and height buttons for 1-pixel adjustments (pinch or scroll to zoom, drag the background to move the picture). The small pictures show what the detector sees in each box. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
       </div>
 
       <div class="help-section">
@@ -1316,12 +1326,24 @@
 </div>
 <div id="tvwStage" class="tvw-bg">
   <div class="tvw-bar">
-    <strong>TV Watch set-up.</strong> Aim so the whole score bar is in view and the iPad stays put. Drag each box onto its target and pull the round handle to size it:
-    <span style="color:#facc15">yellow = Ducks score digit</span>, <span style="color:#fb923c">orange = opponent score digit</span>, <span style="color:#60a5fa">blue = any part of the bar that never changes (the Ducks logo)</span>.
-    Keep the digit boxes snug with a little margin — leave out the shots-on-goal numbers underneath.
+    <strong>TV Watch set-up.</strong> Keep the iPad still with the whole score bar in view. Tap a box button below to select it and zoom in, then drag the box or use the arrow buttons (1 pixel at a time). Pinch or drag the background to zoom and move the picture. Keep the digit boxes snug with a little margin and leave out the shots-on-goal numbers. The small pictures show exactly what the detector sees in each box.
     <button class="vp-start-btn" onclick="tvwCloseSetup()" style="margin-top:6px;width:100%;">✓ Done</button>
   </div>
-  <div id="tvwWrap"><video id="tvwVideo" playsinline muted autoplay></video><div id="tvwBoxes"></div></div>
+  <div id="tvwView"><div id="tvwWrap"><video id="tvwVideo" playsinline muted autoplay></video><div id="tvwBoxes"></div></div></div>
+  <div id="tvwTools">
+    <div class="tvw-row">
+      <button class="tvw-chip on" id="tvwChip_ana" onclick="tvwSelect('ana',true)" style="--c:#facc15"><canvas id="tvwTh_ana" width="48" height="64"></canvas><span>Ducks score</span></button>
+      <button class="tvw-chip" id="tvwChip_opp" onclick="tvwSelect('opp',true)" style="--c:#fb923c"><canvas id="tvwTh_opp" width="48" height="64"></canvas><span>Opp score</span></button>
+      <button class="tvw-chip" id="tvwChip_anc" onclick="tvwSelect('anc',true)" style="--c:#60a5fa"><canvas id="tvwTh_anc" width="48" height="64"></canvas><span>Ducks logo</span></button>
+    </div>
+    <div class="tvw-row">
+      <span class="tvw-grp">Move <button data-n="-1,0,0,0">◀</button><button data-n="0,-1,0,0">▲</button><button data-n="0,1,0,0">▼</button><button data-n="1,0,0,0">▶</button></span>
+      <span class="tvw-grp">Width <button data-n="0,0,-1,0">−</button><button data-n="0,0,1,0">+</button></span>
+      <span class="tvw-grp">Height <button data-n="0,0,0,-1">−</button><button data-n="0,0,0,1">+</button></span>
+      <button id="tvwStepBtn" onclick="tvwToggleStep()">Step 1 px</button>
+      <span class="tvw-grp">Zoom <button onclick="tvwZoomBtn(1/1.5)">−</button><button onclick="tvwZoomBtn(1.5)">+</button><button onclick="tvwFit()">Fit</button></span>
+    </div>
+  </div>
 </div>
 
 <div class="goal-overlay" id="goalOverlay">
@@ -1688,7 +1710,7 @@ function setApiClock(secs) {
 }
 function periodStartSecs() { return currentApiPeriod > 3 ? 4 * 60 + 59 : 19 * 60 + 59; } // OT = 5:00 (regular season)
 
-const BUILD_ID = 'dev-2026-10-28b';
+const BUILD_ID = 'dev-2026-10-29a';
 // Goal alerts are driven by ESPN's SCORE, which trails the game clock by ~10-20 s, and the stream delay is tuned
 // against that lag. The 0:00 end-of-game trigger is driven by the CLOCK (no such lag), so it needs this extra time.
 const END_GAME_EXTRA_MS = 18000;
@@ -3727,33 +3749,125 @@ function camNoteEspn(team) { if (tvw.noNote === team) { tvw.noNote = null; retur
 
 // ---- set-up screen: drag three boxes over the live camera picture ----
 const TVW_BOXES = [['ana', 'Ducks score', '#facc15'], ['opp', 'Opp score', '#fb923c'], ['anc', 'Ducks logo (always there)', '#60a5fa']];
+const tvwV = { z: 1, tx: 0, ty: 0, W: 0, H: 0, w: 0, h: 0, step: 1, sel: 'ana', els: {}, timer: null, wired: false };
+const tvwEl = (id) => document.getElementById(id);
+function tvwLayout() {                                   // size the picture to fit the set-up area, then apply zoom/pan
+  const view = tvwEl('tvwView'), wrap = tvwEl('tvwWrap'), v = tvwEl('tvwVideo');
+  const ar = (v.videoWidth && v.videoHeight) ? v.videoWidth / v.videoHeight : 16 / 9;
+  const W = view.clientWidth, H = view.clientHeight; if (!W || !H) return;
+  const w = Math.min(W, H * ar);
+  tvwV.W = W; tvwV.H = H; tvwV.w = w; tvwV.h = w / ar;
+  wrap.style.width = w + 'px'; wrap.style.height = (w / ar) + 'px'; wrap.style.maxHeight = 'none';
+  tvwApplyView();
+}
+function tvwApplyView() {
+  const V = tvwV; V.z = Math.min(10, Math.max(1, V.z));
+  const cw = V.w * V.z, ch = V.h * V.z;
+  V.tx = cw <= V.W ? (V.W - cw) / 2 : Math.min(0, Math.max(V.W - cw, V.tx));
+  V.ty = ch <= V.H ? (V.H - ch) / 2 : Math.min(0, Math.max(V.H - ch, V.ty));
+  tvwEl('tvwWrap').style.transform = 'translate(' + V.tx + 'px,' + V.ty + 'px) scale(' + V.z + ')';
+  tvwEl('tvwBoxes').style.setProperty('--inv', String(1 / V.z));   // keeps borders, labels and handles a constant size on screen
+}
+function tvwZoomAt(nz, cx, cy) {
+  const V = tvwV; nz = Math.min(10, Math.max(1, nz));
+  V.tx = cx - (cx - V.tx) * nz / V.z; V.ty = cy - (cy - V.ty) * nz / V.z; V.z = nz; tvwApplyView();
+}
+function tvwZoomBtn(f) { tvwZoomAt(tvwV.z * f, tvwV.W / 2, tvwV.H / 2); }
+function tvwFit() { tvwV.z = 1; tvwV.tx = 0; tvwV.ty = 0; tvwApplyView(); }
+function tvwZoomTo(key) {                                // zoom so the box fills roughly a third of the view, centred
+  const b = tvw.boxes[key], V = tvwV; if (!V.w) return;
+  const z = Math.min(10, Math.max(1, 0.3 * V.W / (b.w * V.w)));
+  V.z = z; V.tx = V.W / 2 - (b.x + b.w / 2) * V.w * z; V.ty = V.H / 2 - (b.y + b.h / 2) * V.h * z; tvwApplyView();
+}
+function tvwSelect(key, zoom) {
+  tvwV.sel = key;
+  for (const [k] of TVW_BOXES) {
+    const e = tvwV.els[k]; if (e) e.classList.toggle('sel', k === key);
+    const c = tvwEl('tvwChip_' + k); if (c) c.classList.toggle('on', k === key);
+  }
+  if (zoom) tvwZoomTo(key);
+}
+function tvwPlace(key) {
+  const b = tvw.boxes[key], el = tvwV.els[key]; if (!el) return;
+  el.style.left = b.x * 100 + '%'; el.style.top = b.y * 100 + '%'; el.style.width = b.w * 100 + '%'; el.style.height = b.h * 100 + '%';
+}
+function tvwNudge(dx, dy, dw, dh) {                      // dx/dy move, dw/dh grow or shrink on both sides; one step = tvwV.step video pixels
+  const key = tvwV.sel || 'ana', b = tvw.boxes[key], v = tvwEl('tvwVideo');
+  const sx = tvwV.step / (v.videoWidth || 1280), sy = tvwV.step / (v.videoHeight || 720);
+  const w = Math.min(0.5, Math.max(0.005, b.w + 2 * dw * sx)), h = Math.min(0.5, Math.max(0.005, b.h + 2 * dh * sy));
+  b.x = Math.min(1 - w, Math.max(0, b.x + dx * sx - (w - b.w) / 2));
+  b.y = Math.min(1 - h, Math.max(0, b.y + dy * sy - (h - b.h) / 2));
+  b.w = w; b.h = h; tvwPlace(key);
+}
+function tvwToggleStep() { tvwV.step = tvwV.step === 1 ? 4 : 1; tvwEl('tvwStepBtn').textContent = 'Step ' + tvwV.step + ' px'; }
+function tvwPreview() {                                  // little pictures of what each box currently contains
+  const v = tvwEl('tvwVideo'); if (!v || !v.videoWidth) return;
+  for (const [k] of TVW_BOXES) {
+    const c = tvwEl('tvwTh_' + k); if (!c || !c.getContext) continue; const b = tvw.boxes[k];
+    try { c.getContext('2d').drawImage(v, b.x * v.videoWidth, b.y * v.videoHeight, b.w * v.videoWidth, b.h * v.videoHeight, 0, 0, c.width, c.height); } catch (e) {}
+  }
+}
+function tvwWireSetup() {                                // one-time: pan/pinch/wheel on the picture, press-and-hold on the arrow buttons
+  if (tvwV.wired) return; tvwV.wired = true;
+  const view = tvwEl('tvwView'), P = new Map();
+  view.addEventListener('pointerdown', (ev) => { P.set(ev.pointerId, { x: ev.clientX, y: ev.clientY }); try { view.setPointerCapture(ev.pointerId); } catch (e) {} });
+  view.addEventListener('pointermove', (ev) => {
+    if (!P.has(ev.pointerId)) return;
+    const old = P.get(ev.pointerId), nw = { x: ev.clientX, y: ev.clientY }, r = view.getBoundingClientRect();
+    if (P.size === 1) { tvwV.tx += nw.x - old.x; tvwV.ty += nw.y - old.y; tvwApplyView(); }
+    else if (P.size === 2) {
+      const other = [...P].find(([id]) => id !== ev.pointerId)[1];
+      const d0 = Math.hypot(old.x - other.x, old.y - other.y), d1 = Math.hypot(nw.x - other.x, nw.y - other.y);
+      if (d0 > 10) tvwZoomAt(tvwV.z * d1 / d0, (nw.x + other.x) / 2 - r.left, (nw.y + other.y) / 2 - r.top);
+      tvwV.tx += (nw.x - old.x) / 2; tvwV.ty += (nw.y - old.y) / 2; tvwApplyView();
+    }
+    P.set(ev.pointerId, nw);
+  });
+  const end = (ev) => P.delete(ev.pointerId); view.addEventListener('pointerup', end); view.addEventListener('pointercancel', end);
+  view.addEventListener('wheel', (ev) => { ev.preventDefault(); const r = view.getBoundingClientRect(); tvwZoomAt(tvwV.z * (ev.deltaY < 0 ? 1.15 : 1 / 1.15), ev.clientX - r.left, ev.clientY - r.top); }, { passive: false });
+  window.addEventListener('resize', () => { if (tvw.setupOpen) tvwLayout(); });
+  tvwEl('tvwVideo').addEventListener('loadedmetadata', () => { if (tvw.setupOpen) tvwLayout(); });
+  document.querySelectorAll('#tvwTools [data-n]').forEach((btn) => {
+    const a = btn.dataset.n.split(',').map(Number); let t1, t2;
+    const stop = () => { clearTimeout(t1); clearInterval(t2); };
+    btn.addEventListener('pointerdown', (ev) => { ev.preventDefault(); tvwNudge(a[0], a[1], a[2], a[3]); t1 = setTimeout(() => { t2 = setInterval(() => tvwNudge(a[0], a[1], a[2], a[3]), 70); }, 350); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((e) => btn.addEventListener(e, stop));
+  });
+}
+
+// ---- set-up screen: zoomable picture with three boxes you can drag or nudge ----
 function tvwOpenSetup() {
   const go = () => {
-    tvw.setupOpen = true; document.getElementById('tvwStage').className = 'tvw-full'; tvwDrawBoxes();
+    tvw.setupOpen = true; tvwWireSetup(); tvwEl('tvwStage').className = 'tvw-full';
+    tvwDrawBoxes(); tvwLayout(); tvwSelect(tvwV.sel || 'ana', false); tvwFit();
+    clearInterval(tvwV.timer); tvwV.timer = setInterval(tvwPreview, 250);
   };
   if (!tvw.running) tvwStart().then(go); else go();
 }
 function tvwCloseSetup() {
-  tvw.setupOpen = false; document.getElementById('tvwStage').className = 'tvw-bg'; tvwSave();
+  tvw.setupOpen = false; clearInterval(tvwV.timer); tvwV.timer = null;
+  const wrap = tvwEl('tvwWrap'); wrap.style.width = ''; wrap.style.height = ''; wrap.style.transform = ''; wrap.style.maxHeight = '';
+  tvwEl('tvwStage').className = 'tvw-bg'; tvwSave();
   if (tvw.core) tvw.core.reset();
   gameLogEntry('CAM_BOXES', { boxes: tvw.boxes }); tvwUi();
 }
 function tvwDrawBoxes() {
-  const layer = document.getElementById('tvwBoxes'); layer.innerHTML = '';
+  const layer = tvwEl('tvwBoxes'); layer.innerHTML = ''; tvwV.els = {};
   for (const [key, label, color] of TVW_BOXES) {
     const b = tvw.boxes[key], el = document.createElement('div');
-    el.className = 'tvw-rect'; el.style.cssText = `left:${b.x * 100}%;top:${b.y * 100}%;width:${b.w * 100}%;height:${b.h * 100}%;border-color:${color};`;
-    el.innerHTML = `<span class="tvw-lbl" style="background:${color}">${label}</span><span class="tvw-h" style="background:${color}"></span>`;
-    const wrap = document.getElementById('tvwWrap');
+    el.className = 'tvw-rect'; el.style.cssText = 'border-color:' + color + ';';
+    el.innerHTML = '<span class="tvw-lbl" style="background:' + color + '">' + label + '</span><span class="tvw-h" style="background:' + color + '"></span>';
+    tvwV.els[key] = el; tvwPlace(key);
+    const wrap = tvwEl('tvwWrap');
     const drag = (ev, resize) => {
-      ev.preventDefault(); ev.stopPropagation();
-      const r = wrap.getBoundingClientRect(), sx = ev.clientX, sy = ev.clientY, o = { ...b };
+      ev.preventDefault(); ev.stopPropagation(); tvwSelect(key, false);
+      const r = wrap.getBoundingClientRect(), sx = ev.clientX, sy = ev.clientY, o = { ...b };   // r is the zoomed size, so the maths stays right at any zoom
       el.setPointerCapture(ev.pointerId);
       const move = (m) => {
         const dx = (m.clientX - sx) / r.width, dy = (m.clientY - sy) / r.height;
-        if (resize) { b.w = Math.min(0.5, Math.max(0.01, o.w + dx)); b.h = Math.min(0.5, Math.max(0.01, o.h + dy)); }
+        if (resize) { b.w = Math.min(0.5, Math.max(0.005, o.w + dx)); b.h = Math.min(0.5, Math.max(0.005, o.h + dy)); }
         else { b.x = Math.min(1 - b.w, Math.max(0, o.x + dx)); b.y = Math.min(1 - b.h, Math.max(0, o.y + dy)); }
-        el.style.left = b.x * 100 + '%'; el.style.top = b.y * 100 + '%'; el.style.width = b.w * 100 + '%'; el.style.height = b.h * 100 + '%';
+        tvwPlace(key);
       };
       const up = () => { el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up); };
       el.addEventListener('pointermove', move); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);

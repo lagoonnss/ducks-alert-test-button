@@ -1219,6 +1219,9 @@
 
   .help-section-text strong { color: var(--text); }
 
+  #audioWarn { display:none; position:fixed; left:0; right:0; top:0; z-index:6000; background:#b91c1c; color:#fff; font:700 18px 'Barlow',sans-serif; padding:16px 14px; text-align:center; cursor:pointer; box-shadow:0 2px 12px rgba(0,0,0,.5); }
+  #audioWarn.show { display:block; }
+
   /* TV Watch */
   .tvw-bg { position:fixed; right:0; bottom:0; width:2px; height:2px; overflow:hidden; opacity:0.02; pointer-events:none; z-index:-1; }
   .tvw-full { position:fixed; inset:0; background:#000; z-index:5000; display:flex; flex-direction:column; align-items:center; }
@@ -1293,7 +1296,7 @@
 
       <div class="help-section">
         <div class="help-section-title">TV Watch (experimental)</div>
-        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and place the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Tap a box button to select it and zoom in, then drag the box or use the arrow, width and height buttons for 1-pixel adjustments (pinch or scroll to zoom, drag the background to move the picture). The small pictures show what the detector sees in each box. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
+        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and place the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Tap a box button to select it and zoom in, then drag the box or use the arrow, width and height buttons for 1-pixel adjustments (pinch or scroll to zoom, drag the background to move the picture). The small pictures show what the detector sees in each box. While TV Watch runs, the game log also saves a short film of the three boxes each time the data feed reports a goal (CAM_FILM) — send the log along so the detector can be tuned on real footage. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
       </div>
 
       <div class="help-section">
@@ -1324,6 +1327,7 @@
     </div>
   </div>
 </div>
+<div id="audioWarn" onclick="unlockAudio(); audioWarnCheck();">🔇 Sound is OFF — iPad paused the audio. Tap here to turn it back on.</div>
 <div id="tvwStage" class="tvw-bg">
   <div class="tvw-bar">
     <strong>TV Watch set-up.</strong> Keep the iPad still with the whole score bar in view. Tap a box button below to select it and zoom in, then drag the box or use the arrow buttons (1 pixel at a time). Pinch or drag the background to zoom and move the picture. Keep the digit boxes snug with a little margin and leave out the shots-on-goal numbers. The small pictures show exactly what the detector sees in each box.
@@ -1710,7 +1714,7 @@ function setApiClock(secs) {
 }
 function periodStartSecs() { return currentApiPeriod > 3 ? 4 * 60 + 59 : 19 * 60 + 59; } // OT = 5:00 (regular season)
 
-const BUILD_ID = 'dev-2026-10-29a';
+const BUILD_ID = 'dev-2026-10-29b';
 // Goal alerts are driven by ESPN's SCORE, which trails the game clock by ~10-20 s, and the stream delay is tuned
 // against that lag. The 0:00 end-of-game trigger is driven by the CLOCK (no such lag), so it needs this extra time.
 const END_GAME_EXTRA_MS = 18000;
@@ -1833,7 +1837,7 @@ let isRunning = false;
 function getAudioCtx() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    audioCtx.onstatechange = () => { try { addLog('Audio state: ' + audioCtx.state); } catch(e) {} };
+    audioCtx.onstatechange = () => { try { addLog('Audio state: ' + audioCtx.state, audioCtx.state !== 'running'); gameLogEntry('AUDIO_STATE', { state: audioCtx.state }); audioWarnCheck(); } catch(e) {} };
     // iOS: treat page audio as media playback so the ringer/silent switch doesn't mute it
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e) {}
   }
@@ -1848,13 +1852,23 @@ async function ensureAudioRunning(ctx) {
   try { await Promise.race([ctx.resume(), new Promise(r => setTimeout(r, 400))]); } catch(e) {}
   if (ctx.state !== 'running') {
     addLog('🔇 Audio BLOCKED (state: ' + ctx.state + ') — tap the screen anywhere to re-enable sound', true);
+    try { gameLogEntry('AUDIO_BLOCKED', { state: ctx.state }); audioWarnCheck(); } catch(e) {}
     return false;
   }
   return true;
 }
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && audioCtx && audioCtx.state !== 'running') { try { audioCtx.resume(); } catch(e) {} }
+  audioWarnCheck();
 });
+// big red banner whenever the iPad has paused the app's sound (iOS only lets a tap turn it back on)
+function audioWarnCheck() {
+  try {
+    const w = document.getElementById('audioWarn'); if (!w) return;
+    w.classList.toggle('show', !!audioCtx && audioCtx.state !== 'running' && !document.hidden);
+  } catch (e) {}
+}
+setInterval(audioWarnCheck, 1500);
 
 // iOS requires a user tap to unlock Web Audio API
 // Unlock on the very first touch anywhere on the screen
@@ -1945,6 +1959,7 @@ function gameLogEntry(type, data = {}) {
     ...data
   };
   gameLog.push(entry);
+  if (type === 'API_GOAL') { try { tvwFilmDump(data.team); } catch (e) {} }   // save what the camera saw leading up to this goal
   return entry;
 }
 
@@ -3648,6 +3663,28 @@ function tvwSample(box) {
   return g;
 }
 // a live camera's clock keeps moving and its picture never repeats exactly (sensor noise); if either stops, it is frozen
+// ---- filmstrip: the last minute of box pictures (about 4 per second, 4-bit grey), written to the log whenever ESPN reports a goal.
+// The score feed trails the TV, so the moment the score really changed on screen is inside this window. Used to tune the detector offline.
+const TVW_FILM_KEEP_MS = 60000, TVW_FILM_STEP_MS = 240;
+tvw.film = []; tvw.filmLastPush = 0; tvw.filmLastDump = 0;
+function tvwPack4(g) {
+  let s = ''; for (let i = 0; i < g.length; i += 2) {
+    const a = Math.min(15, Math.max(0, Math.round(g[i] / 17))), b = Math.min(15, Math.max(0, Math.round((g[i + 1] || 0) / 17)));
+    s += String.fromCharCode(a * 16 + b);
+  }
+  return btoa(s);
+}
+function tvwFilmPush(f, now) {
+  if (now - tvw.filmLastPush < TVW_FILM_STEP_MS) return; tvw.filmLastPush = now;
+  tvw.film.push([now, tvwPack4(f.ana), tvwPack4(f.opp), tvwPack4(f.anc)]);
+  while (tvw.film.length && now - tvw.film[0][0] > TVW_FILM_KEEP_MS) tvw.film.shift();
+}
+function tvwFilmDump(team) {
+  if (!tvw.running || !tvw.film.length) return;
+  const since = tvw.filmLastDump ? tvw.filmLastDump - 4000 : 0, fr = tvw.film.filter(x => x[0] > since);
+  tvw.filmLastDump = Date.now(); if (!fr.length) return;
+  gameLogEntry('CAM_FILM', { team, n: fr.length, note: '4-bit grey, two pixels per byte (high nibble first), 24x32 per box; frame = [ms, ana, opp, anchor]', frames: fr, boxes: tvw.boxes });
+}
 function tvwWatchdog(v, now, f) {
   if (v.currentTime !== tvw.lastCT) { tvw.lastCT = v.currentTime; tvw.lastCTAt = now; }
   if (f) {
@@ -3673,6 +3710,7 @@ function tvwTick() {
     const now = Date.now();
     const ready = v.videoWidth && v.readyState >= 2;
     const f = ready ? { ana: tvwSample(tvw.boxes.ana), opp: tvwSample(tvw.boxes.opp), anc: tvwSample(tvw.boxes.anc) } : null;
+    if (f) tvwFilmPush(f, now);
     const frozen = tvwWatchdog(v, now, f);
     if (!frozen && f) for (const e of tvw.core.step(f, now)) tvwEvent(e, now);
     if (now - tvw.lastUiAt > 400) { tvw.lastUiAt = now; tvwUi(); }

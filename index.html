@@ -1243,6 +1243,8 @@
   #tvwTools button:active { background:#2b3038; }
   #tvwTools .tvw-chip { display:flex; align-items:center; gap:8px; padding:3px 10px 3px 4px; border:2px solid var(--c); font-size:13px; }
   #tvwTools .tvw-chip.on { background:#2b3038; box-shadow:0 0 0 2px var(--c); }
+  #tvwTools .tvw-q { font-size:18px; font-weight:800; min-width:18px; text-align:center; }
+  #tvwQual { font:600 14px 'Barlow',sans-serif; text-align:center; min-height:20px; line-height:1.35; }
   #tvwTools .tvw-chip canvas { width:36px; height:48px; background:#111; border-radius:4px; }
 </style>
 
@@ -1296,7 +1298,7 @@
 
       <div class="help-section">
         <div class="help-section-title">TV Watch (experimental)</div>
-        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and place the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Tap a box button to select it and zoom in, then drag the box or use the arrow, width and height buttons for 1-pixel adjustments (pinch or scroll to zoom, drag the background to move the picture). The small pictures show what the detector sees in each box. While TV Watch runs, the game log also saves a short film of the three boxes each time the data feed reports a goal (CAM_FILM) — send the log along so the detector can be tuned on real footage. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
+        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and place the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Tap a box button to select it and zoom in, then drag the box or use the arrow, width and height buttons for 1-pixel adjustments (pinch or scroll to zoom, drag the background to move the picture). The small pictures show what the detector sees in each box. Each box turns green with a ✓ when its picture should read well, amber with a ⚠ when it is usable but not ideal, and red with a ✕ when it needs fixing (digit cut off, other text inside, too small or faint, background too busy, or the picture shaking); the line under the buttons says what to change. It checks picture quality only — it cannot tell whether the digit is the right one. While TV Watch runs, the game log also saves a short film of the three boxes each time the data feed reports a goal (CAM_FILM) — send the log along so the detector can be tuned on real footage. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
       </div>
 
       <div class="help-section">
@@ -1336,10 +1338,11 @@
   <div id="tvwView"><div id="tvwWrap"><video id="tvwVideo" playsinline muted autoplay></video><div id="tvwBoxes"></div></div></div>
   <div id="tvwTools">
     <div class="tvw-row">
-      <button class="tvw-chip on" id="tvwChip_ana" onclick="tvwSelect('ana',true)" style="--c:#facc15"><canvas id="tvwTh_ana" width="48" height="64"></canvas><span>Ducks score</span></button>
-      <button class="tvw-chip" id="tvwChip_opp" onclick="tvwSelect('opp',true)" style="--c:#fb923c"><canvas id="tvwTh_opp" width="48" height="64"></canvas><span>Opp score</span></button>
-      <button class="tvw-chip" id="tvwChip_anc" onclick="tvwSelect('anc',true)" style="--c:#60a5fa"><canvas id="tvwTh_anc" width="48" height="64"></canvas><span>Ducks logo</span></button>
+      <button class="tvw-chip on" id="tvwChip_ana" onclick="tvwSelect('ana',true)" style="--c:#facc15"><canvas id="tvwTh_ana" width="48" height="64"></canvas><span>Ducks score</span><span class="tvw-q" id="tvwQ_ana"></span></button>
+      <button class="tvw-chip" id="tvwChip_opp" onclick="tvwSelect('opp',true)" style="--c:#fb923c"><canvas id="tvwTh_opp" width="48" height="64"></canvas><span>Opp score</span><span class="tvw-q" id="tvwQ_opp"></span></button>
+      <button class="tvw-chip" id="tvwChip_anc" onclick="tvwSelect('anc',true)" style="--c:#60a5fa"><canvas id="tvwTh_anc" width="48" height="64"></canvas><span>Ducks logo</span><span class="tvw-q" id="tvwQ_anc"></span></button>
     </div>
+    <div id="tvwQual"></div>
     <div class="tvw-row">
       <span class="tvw-grp">Move <button data-n="-1,0,0,0">◀</button><button data-n="0,-1,0,0">▲</button><button data-n="0,1,0,0">▼</button><button data-n="1,0,0,0">▶</button></span>
       <span class="tvw-grp">Width <button data-n="0,0,-1,0">−</button><button data-n="0,0,1,0">+</button></span>
@@ -1714,7 +1717,7 @@ function setApiClock(secs) {
 }
 function periodStartSecs() { return currentApiPeriod > 3 ? 4 * 60 + 59 : 19 * 60 + 59; } // OT = 5:00 (regular season)
 
-const BUILD_ID = 'dev-2026-10-29b';
+const BUILD_ID = 'dev-2026-11-05a';
 // Goal alerts are driven by ESPN's SCORE, which trails the game clock by ~10-20 s, and the stream delay is tuned
 // against that lag. The 0:00 end-of-game trigger is driven by the CLOCK (no such lag), so it needs this extra time.
 const END_GAME_EXTRA_MS = 18000;
@@ -3838,8 +3841,43 @@ function tvwNudge(dx, dy, dw, dh) {                      // dx/dy move, dw/dh gr
   b.w = w; b.h = h; tvwPlace(key);
 }
 function tvwToggleStep() { tvwV.step = tvwV.step === 1 ? 4 : 1; tvwEl('tvwStepBtn').textContent = 'Step ' + tvwV.step + ' px'; }
+function tvwQualityUpdate() {
+  const v = tvwEl('tvwVideo'); if (!v || !v.videoWidth || !tvw.cx) return;
+  const V = tvwV; V.hist = V.hist || {}; V.q = V.q || {};
+  for (const [k] of TVW_BOXES) {
+    const b = tvw.boxes[k], g = tvwSample(b), H = V.hist[k] = V.hist[k] || [];
+    H.push(g); if (H.length > 6) H.shift();
+    let shake = 0; if (H.length >= 4) { let t = 0; for (let i = 1; i < H.length; i++) t += tvDist(H[i], H[i - 1]); shake = t / (H.length - 1); }
+    const overlap = TVW_BOXES.some(([o]) => o !== k && tvwOverlapFrac(b, tvw.boxes[o]) > 0.1);
+    const q = tvwQuality(g, k === 'anc' ? 'anc' : 'digit', { boxPxH: b.h * v.videoHeight, shake, overlap });
+    const st = V.q[k] = V.q[k] || { shown: null, cand: null, n: 0 };
+    if (st.cand && st.cand.level === q.level) st.n++; else st.n = 1;   // a change of verdict must hold for 3 checks (about 0.75 s) before it shows
+    st.cand = q;
+    if (!st.shown || st.shown.level === q.level || st.n >= 3) st.shown = q;
+  }
+  tvwQualityShow();
+}
+function tvwQualityShow() {
+  const QC = { good: '#22c55e', warn: '#f59e0b', bad: '#ef4444' }, QI = { good: '✓', warn: '⚠', bad: '✕' };
+  let all = true, any = false; const lines = [];
+  for (const [k, label, color] of TVW_BOXES) {
+    const st = tvwV.q && tvwV.q[k], q = st && st.shown, el = tvwV.els[k], badge = tvwEl('tvwQ_' + k);
+    if (!q) { all = false; continue; }
+    any = true;
+    if (el) {
+      el.style.borderColor = QC[q.level]; el.style.borderStyle = q.level === 'warn' ? 'dashed' : 'solid';
+      const lb = el.querySelector('.tvw-lbl'); if (lb) lb.textContent = QI[q.level] + ' ' + label;
+    }
+    if (badge) { badge.textContent = QI[q.level]; badge.style.color = QC[q.level]; }
+    if (q.level !== 'good') { all = false; lines.push('<span style="color:' + QC[q.level] + '">' + QI[q.level] + ' ' + label.replace(' (always there)', '') + ': ' + q.msgs[0] + '</span>'); }
+  }
+  const panel = tvwEl('tvwQual');
+  if (panel) panel.innerHTML = !any ? '<span style="color:#9ca3af">Checking the boxes…</span>' : all ? '<span style="color:#22c55e">✓ All three boxes look good — tap Done</span>' : lines.join('<br>');
+  const done = document.querySelector('#tvwStage .tvw-bar .vp-start-btn'); if (done) done.style.background = (any && all) ? '#16a34a' : '';
+}
 function tvwPreview() {                                  // little pictures of what each box currently contains
   const v = tvwEl('tvwVideo'); if (!v || !v.videoWidth) return;
+  try { tvwQualityUpdate(); } catch (e) {}
   for (const [k] of TVW_BOXES) {
     const c = tvwEl('tvwTh_' + k); if (!c || !c.getContext) continue; const b = tvw.boxes[k];
     try { c.getContext('2d').drawImage(v, b.x * v.videoWidth, b.y * v.videoHeight, b.w * v.videoWidth, b.h * v.videoHeight, 0, 0, c.width, c.height); } catch (e) {}
@@ -3873,10 +3911,80 @@ function tvwWireSetup() {                                // one-time: pan/pinch/
   });
 }
 
+// ==TVQ START==
+// ---- box quality check: scores the picture inside each box so the set-up screen can tell you when a box will give a good read ----
+function tvwOtsu(g) {
+  const h = new Array(256).fill(0); for (let i = 0; i < g.length; i++) h[Math.max(0, Math.min(255, Math.round(g[i])))]++;
+  const tot = g.length; let sum = 0; for (let i = 0; i < 256; i++) sum += i * h[i];
+  let wB = 0, sB = 0, best = -1, thr = 128;
+  for (let t = 0; t < 256; t++) {
+    wB += h[t]; if (!wB) continue; const wF = tot - wB; if (!wF) break;
+    sB += t * h[t]; const mB = sB / wB, mF = (sum - sB) / wF, v = wB * wF * (mB - mF) * (mB - mF);
+    if (v > best) { best = v; thr = t; }
+  }
+  return thr;
+}
+function tvwHasGap(a, min) {                      // an empty stretch of at least `min` between two non-empty parts
+  let first = -1, last = -1; for (let i = 0; i < a.length; i++) if (a[i] > 0) { if (first < 0) first = i; last = i; }
+  let run = 0; for (let i = first; i <= last; i++) { if (a[i] > 0) run = 0; else if (++run >= min) return true; }
+  return false;
+}
+function tvwOverlapFrac(a, b) {
+  const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+  return (w > 0 && h > 0) ? (w * h) / (a.w * a.h) : 0;
+}
+// g = 24x32 grey picture of the box. kind = 'digit' | 'anc'. info = { boxPxH, shake, overlap }
+function tvwQuality(g, kind, info) {
+  const W = TVW_W, H = TVW_H, N = g.length, res = { level: 'good', msgs: [] }, rank = { good: 0, warn: 1, bad: 2 };
+  const flag = (l, m) => { if (rank[l] > rank[res.level]) res.level = l; res.msgs.push(m); };
+  info = info || {};
+  if (info.overlap) flag('bad', 'overlaps another box');
+  if (info.shake > 0.1) flag('bad', 'picture is shaking — fix the iPad in place');
+  else if (info.shake > 0.05) flag('warn', 'picture is moving — hold the iPad still');
+  const con = tvContrast(g);
+  if (kind === 'anc') {
+    if (con < 15) flag('bad', 'blank area — put it over the logo');
+    else if (con < 30) flag('warn', 'little detail — the logo should fill the box');
+    return res;
+  }
+  const thr = tvwOtsu(g); let hi = 0, sHi = 0, sLo = 0; for (let i = 0; i < N; i++) { if (g[i] > thr) { hi++; sHi += g[i]; } else sLo += g[i]; }
+  const dcon = (hi && hi < N) ? Math.abs(sHi / hi - sLo / (N - hi)) : 0;     // how far apart the light and dark parts are
+  if (dcon < 30) { flag('bad', "can't see a clear digit (too faint)"); return res; }
+  if (dcon < 50) flag('warn', 'digit is faint — more light or a closer camera');
+  const inkBright = hi <= N - hi, isInk = (v) => inkBright ? v > thr : v <= thr;
+  const m = new Uint8Array(N); let nInk = 0;
+  for (let i = 0; i < N; i++) if (isInk(g[i])) { m[i] = 1; nInk++; }
+  // drop lone specks (noise) so they cannot bridge gaps or fake a digit
+  const c = new Uint8Array(N); let n = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x; if (!m[i]) continue;
+    if ((x > 0 && m[i - 1]) || (x < W - 1 && m[i + 1]) || (y > 0 && m[i - W]) || (y < H - 1 && m[i + W])) { c[i] = 1; n++; }
+  }
+  if (n < N * 0.04) { flag('bad', 'no digit found in the box'); return res; }
+  const col = new Array(W).fill(0), row = new Array(H).fill(0); let minX = W, maxX = -1, minY = H, maxY = -1;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (c[y * W + x]) { col[x]++; row[y]++; if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y; }
+  const edge = minX <= 0 || maxX >= W - 1 || minY <= 0 || maxY >= H - 1, gap = tvwHasGap(col, 3) || tvwHasGap(row, 3);
+  if (edge && gap) flag('bad', 'box is off the digit — it has other text in it and cuts the digit off; move and shrink it onto just the digit');
+  else if (edge) flag('bad', 'digit touches the edge — make the box a little bigger or move it');
+  else if (gap) flag('bad', 'includes other text or graphics — shrink it to just the digit');
+  const inkH = maxY - minY + 1, inkW = maxX - minX + 1;
+  if (inkH / H < 0.45 || inkW / W < 0.18) flag('warn', 'box is loose — shrink it to fit the digit');
+  if (info.boxPxH) {
+    const px = inkH / H * info.boxPxH;
+    if (px < 8) flag('bad', 'digit is only ' + Math.round(px) + ' px tall — move the camera closer or zoom in');
+    else if (px < 14) flag('warn', 'digit is small (' + Math.round(px) + ' px) — closer is better');
+  }
+  let bs = 0, bn = 0, bm = 0; for (let i = 0; i < N; i++) if (!m[i]) { bs += g[i]; bn++; }
+  if (bn) { bm = bs / bn; let v = 0; for (let i = 0; i < N; i++) if (!m[i]) v += (g[i] - bm) * (g[i] - bm); if (Math.sqrt(v / bn) / dcon > 0.3) flag('warn', 'background is busy — the picture shows through the bar'); }
+  return res;
+}
+// ==TVQ END==
+
 // ---- set-up screen: zoomable picture with three boxes you can drag or nudge ----
 function tvwOpenSetup() {
   const go = () => {
     tvw.setupOpen = true; tvwWireSetup(); tvwEl('tvwStage').className = 'tvw-full';
+    tvwV.q = {}; tvwV.hist = {};
     tvwDrawBoxes(); tvwLayout(); tvwSelect(tvwV.sel || 'ana', false); tvwFit();
     clearInterval(tvwV.timer); tvwV.timer = setInterval(tvwPreview, 250);
   };
@@ -3887,7 +3995,8 @@ function tvwCloseSetup() {
   const wrap = tvwEl('tvwWrap'); wrap.style.width = ''; wrap.style.height = ''; wrap.style.transform = ''; wrap.style.maxHeight = '';
   tvwEl('tvwStage').className = 'tvw-bg'; tvwSave();
   if (tvw.core) tvw.core.reset();
-  gameLogEntry('CAM_BOXES', { boxes: tvw.boxes }); tvwUi();
+  const qual = {}; for (const [k] of TVW_BOXES) { const q = tvwV.q && tvwV.q[k] && tvwV.q[k].shown; if (q) qual[k] = { level: q.level, msgs: q.msgs }; }
+  gameLogEntry('CAM_BOXES', { boxes: tvw.boxes, quality: qual }); tvwUi();
 }
 function tvwDrawBoxes() {
   const layer = tvwEl('tvwBoxes'); layer.innerHTML = ''; tvwV.els = {};

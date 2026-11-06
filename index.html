@@ -1244,6 +1244,8 @@
   #tvwTools .tvw-chip { display:flex; align-items:center; gap:8px; padding:3px 10px 3px 4px; border:2px solid var(--c); font-size:13px; }
   #tvwTools .tvw-chip.on { background:#2b3038; box-shadow:0 0 0 2px var(--c); }
   #tvwTools .tvw-q { font-size:18px; font-weight:800; min-width:18px; text-align:center; }
+  #tvwTools .tvw-learn { flex-direction:column; align-items:center; gap:8px; max-width:640px; font:600 13px 'Barlow',sans-serif; color:#cbd5e1; text-align:center; }
+  #tvwTools #tvwMarkBtn { min-height:64px; width:100%; background:#15803d; border-color:#22c55e; color:#fff; font-size:18px; }
   #tvwQual { font:600 14px 'Barlow',sans-serif; text-align:center; min-height:20px; line-height:1.35; }
   #tvwTools .tvw-chip canvas { width:36px; height:48px; background:#111; border-radius:4px; }
 </style>
@@ -1298,7 +1300,7 @@
 
       <div class="help-section">
         <div class="help-section-title">TV Watch (experimental)</div>
-        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and place the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Tap a box button to select it and zoom in, then drag the box or use the arrow, width and height buttons for 1-pixel adjustments (pinch or scroll to zoom, drag the background to move the picture). The small pictures show what the detector sees in each box. Each box turns green with a ✓ when its picture should read well, amber with a ⚠ when it is usable but not ideal, and red with a ✕ when it needs fixing (digit cut off, other text inside, too small or faint, background too busy, or the picture shaking); the line under the buttons says what to change. It checks picture quality only — it cannot tell whether the digit is the right one. While TV Watch runs, the game log also saves a short film of the three boxes each time the data feed reports a goal (CAM_FILM) — send the log along so the detector can be tuned on real footage. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
+        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and place the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Tap a box button to select it and zoom in, then drag the box or use the arrow, width and height buttons for 1-pixel adjustments (pinch or scroll to zoom, drag the background to move the picture). The small pictures show what the detector sees in each box. Each box turns green with a ✓ when its picture should read well, amber with a ⚠ when it is usable but not ideal, and red with a ✕ when it needs fixing (digit cut off, other text inside, too small or faint, background too busy, or the picture shaking); the line under the buttons says what to change. It checks picture quality only — it cannot tell whether the digit is the right one. Goal graphic: when the broadcast covers the score bar with its big goal graphic, the app can spot it and treat it as an early Ducks goal (several seconds before the new score appears). Teach it first: set the boxes, tap “🎬 Goal graphic”, play a Ducks goal from a full replay of the same broadcast and tap the green button while the graphic is on screen; it only works with the boxes and camera exactly as they were when you taught it, and it covers Ducks goals only. The detector ignores tiny changes (like the shots-on-goal counter), acts quickly on a clearly different digit, and waits about 3 extra seconds before trusting a change that only looks slightly different (such as 5 to 6); ignored changes are noted in the log as CAM_SMALL. While TV Watch runs, the game log also saves a short film of the three boxes each time the data feed reports a goal (CAM_FILM) — send the log along so the detector can be tuned on real footage. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
       </div>
 
       <div class="help-section">
@@ -1349,6 +1351,13 @@
       <span class="tvw-grp">Height <button data-n="0,0,0,-1">−</button><button data-n="0,0,0,1">+</button></span>
       <button id="tvwStepBtn" onclick="tvwToggleStep()">Step 1 px</button>
       <span class="tvw-grp">Zoom <button onclick="tvwZoomBtn(1/1.5)">−</button><button onclick="tvwZoomBtn(1.5)">+</button><button onclick="tvwFit()">Fit</button></span>
+      <button id="tvwLearnBtn" onclick="tvwLearnToggle()">🎬 Goal graphic</button>
+    </div>
+    <div id="tvwLearn" class="tvw-learn" style="display:none">
+      <div>Teach the app what the goal graphic looks like. Play a Ducks goal from a full replay of the same broadcast, and when the big graphic covers the score bar, tap the green button. Tap on a few different goals if you can. To test it, replay a goal: the match number should jump above the line and turn green.</div>
+      <button id="tvwMarkBtn" onclick="tvwAnimMark()">● GOAL GRAPHIC IS ON SCREEN — TAP</button>
+      <div id="tvwLearnInfo"></div>
+      <button onclick="tvwAnimClear()" style="min-height:36px;font-size:13px">Clear learned</button>
     </div>
   </div>
 </div>
@@ -1717,7 +1726,7 @@ function setApiClock(secs) {
 }
 function periodStartSecs() { return currentApiPeriod > 3 ? 4 * 60 + 59 : 19 * 60 + 59; } // OT = 5:00 (regular season)
 
-const BUILD_ID = 'dev-2026-11-05a';
+const BUILD_ID = 'dev-2026-11-06b';
 // Goal alerts are driven by ESPN's SCORE, which trails the game clock by ~10-20 s, and the stream delay is tuned
 // against that lag. The 0:00 end-of-game trigger is driven by the CLOCK (no such lag), so it needs this extra time.
 const END_GAME_EXTRA_MS = 18000;
@@ -3433,7 +3442,9 @@ function tvDist(a, b) { return tvDistZ(tvZ(a), tvShifts(b)); }
 
 function TvCore(cfg) {
   this.cfg = Object.assign({ thrMin: 0.035, confirmFrames: 8, needChanged: 7, anchorMin: 0.5,
-                             baselineFrames: 15, cooldownMs: 3000, settleMs: 5000 }, cfg || {});
+                             baselineFrames: 15, cooldownMs: 3000, settleMs: 2500,
+                             confirmMs: 800, minFrames: 3, needFrac: 0.85, minDiff: 0.2,
+                             anchorLow: 0.3, hideMs: 500, showMs: 300, softDiff: 0.08, softMs: 3000 }, cfg || {});
   this.reset();
 }
 TvCore.prototype.reset = function () {
@@ -3472,22 +3483,30 @@ TvCore.prototype.step = function (f, t) {
     return ev;
   }
 
-  // ---- is the score bug on screen and where we calibrated it?
+  // ---- is the score bar on screen and where we calibrated it? (with hysteresis, so a washed-out logo for a moment does not flip it)
   const ncc = tvDot(tvZ(f.anc), this.base.ancZ);
-  const visible = ncc >= c.anchorMin && conA >= Math.max(12, 0.4 * this.base.conA) && conO >= Math.max(12, 0.4 * this.base.conO);
-  this.dbg = { ncc, conA, conO, vis: visible };
-  if (!visible) {
-    if (this.vis !== false) { this.vis = false; ev.push({ type: 'hidden' }); }
-    this.hist = [];
-    return ev;
+  const digitsOk = conA >= Math.max(12, 0.4 * this.base.conA) && conO >= Math.max(12, 0.4 * this.base.conO);
+  const goodNow = ncc >= c.anchorMin && digitsOk, goneNow = ncc < c.anchorLow || !digitsOk;
+  this.dbg = { ncc, conA, conO, vis: this.vis !== false };
+  if (this.vis !== false) {                       // currently "on screen": leave only after it has clearly been gone for hideMs
+    if (goneNow) { if (this.badSince == null) this.badSince = t; } else this.badSince = null;
+    if (this.badSince != null && t - this.badSince >= c.hideMs) {
+      this.vis = false; this.badSince = null; this.goodSince = null; this.hist = []; this.soft = null; this.dbg.vis = false; ev.push({ type: 'hidden' });
+      return ev;
+    }
+  } else {                                        // currently "away": come back only after it has looked right for showMs
+    if (goodNow) { if (this.goodSince == null) this.goodSince = t; } else this.goodSince = null;
+    if (this.goodSince != null && t - this.goodSince >= c.showMs) {
+      this.vis = true; this.goodSince = null; this.badSince = null; this.settleUntil = t + c.settleMs; this.dbg.vis = true; ev.push({ type: 'visible' });
+    } else { this.hist = []; return ev; }
   }
-  if (this.vis === false) { this.vis = true; this.settleUntil = t + c.settleMs; ev.push({ type: 'visible' }); }   // let the bar's return animation finish
+  if (goneNow) return ev;                         // bar is flickering but not yet declared gone: do not read digits from a bad frame
 
   const dA = tvDistZ(zA, this.base.shA), dO = tvDistZ(zO, this.base.shO);
   const thr = this.thr();
   this.dbg.dA = dA; this.dbg.dO = dO; this.dbg.thr = thr;
   this.hist.push({ zA, zO, grayA: f.ana, grayO: f.opp, dA, dO, t });
-  if (this.hist.length > c.confirmFrames) this.hist.shift();
+  while (this.hist.length && t - this.hist[0].t > c.confirmMs) this.hist.shift();   // the confirm window is a length of time, so it behaves the same at any frame rate
   const chA = dA > thr, chO = dO > thr;
 
   if (!chA && !chO) {                            // unchanged: learn noise level, follow slow lighting drift
@@ -3501,29 +3520,46 @@ TvCore.prototype.step = function (f, t) {
   }
 
   // ---- something changed: only act once the new picture has been steady for the whole window
-  if (this.hist.length < c.confirmFrames) return ev;
-  const H = this.hist, last = H[H.length - 1];
+  const H = this.hist;
+  if (H.length < c.minFrames || t - H[0].t < c.confirmMs * 0.75) return ev;
+  const last = H[H.length - 1], need = Math.ceil(H.length * c.needFrac);
   const confirmed = (dKey, zKey) => {
-    if (H.filter(h => h[dKey] > thr).length < c.needChanged) return false;
+    if (H.filter(h => h[dKey] > thr).length < need) return false;
     const lastSh = tvShifts(zKey === 'zA' ? last.grayA : last.grayO);
     return H.every(h => tvDistZ(h[zKey], lastSh) < thr * 0.8);
   };
-  const confA = confirmed('dA', 'zA'), confO = confirmed('dO', 'zO');
+  let confA = confirmed('dA', 'zA'), confO = confirmed('dO', 'zO');
+  if (this.soft && t - this.soft.last > 1200) this.soft = null;
   if (!confA && !confO) return ev;
 
   const meanOf = (key) => { const o = new Float32Array(TVW_N); for (const h of H) for (let i = 0; i < TVW_N; i++) o[i] += h[key][i] / H.length; return o; };
-  const newA = meanOf('grayA'), newO = meanOf('grayO');
+  const newA = meanOf('grayA'), newO = meanOf('grayO'), b = this.base;
+  const absorb = (isA) => { if (isA) { b.ana = newA; b.shA = tvShifts(newA); b.conA = tvContrast(newA); } else { b.opp = newO; b.shO = tvShifts(newO); b.conO = tvContrast(newO); } };
+  const mA = last.dA, mO = last.dO;               // how far each digit now is from its saved picture (0 = same, ~1 = unrelated)
 
-  if (confA && confO) {                          // both digits changed at once = graphic/skin change, not a goal
-    this._setBase(newA, newO, this.base.ancZ);
-    this.tmplHist = { ANA: [this.base.ana], OPP: [this.base.opp] };
-    this.hist = []; this.holdN = 0;
-    ev.push({ type: 'rebase', reason: 'both digits changed', dA: last.dA, dO: last.dO });
-    return ev;
+  if (confA && confO) {
+    const big = Math.max(mA, mO), small = Math.min(mA, mO);
+    if (big < c.minDiff) { absorb(true); absorb(false); this.hist = []; this.holdN = 0; return ev; }            // both only wobbled (lighting/exposure)
+    if (small >= Math.max(0.5 * big, 0.15)) {                                                                    // both really changed = graphic/skin change, not a goal
+      this._setBase(newA, newO, b.ancZ);
+      this.tmplHist = { ANA: [this.base.ana], OPP: [this.base.opp] };
+      this.hist = []; this.holdN = 0;
+      ev.push({ type: 'rebase', reason: 'both digits changed', dA: mA, dO: mO });
+      return ev;
+    }
+    if (mA > mO) { confO = false; absorb(false); } else { confA = false; absorb(true); }                         // one digit changed, the other only wobbled
   }
-  // the other digit is also on its way to changing: a graphic/skin change, not a goal — wait to see (up to ~1.5 s)
+  const dBig = confA ? mA : mO;
+  if (dBig < c.softDiff) { absorb(confA); this.hist = []; this.holdN = 0; this.soft = null; ev.push({ type: 'small', team: confA ? 'ANA' : 'OPP', diff: dBig }); return ev; }   // far too small to be a different digit (e.g. shots counter)
+  if (dBig < c.minDiff) {                          // medium change: could be a look-alike digit (5 to 6) or just blur, so it has to last softMs
+    const tm = confA ? 'ANA' : 'OPP';
+    if (!this.soft || this.soft.team !== tm) this.soft = { team: tm, since: t };
+    this.soft.last = t;
+    if (t - this.soft.since < c.softMs) return ev;
+  }
+  // the other digit is also on its way to changing: wait a moment to see whether it is a graphic change
   const otherKey = confA ? 'dO' : 'dA';
-  if (H.slice(-4).some(h => h[otherKey] > thr * 0.7) && (this.holdN = (this.holdN || 0) + 1) < 15) return ev;
+  if (H.slice(-4).some(h => h[otherKey] > Math.max(0.12, 0.4 * dBig)) && (this.holdN = (this.holdN || 0) + 1) < 15) return ev;
   this.holdN = 0;
   if (t < this.settleUntil) return ev;           // bar only just came back: wait for its animation to settle
   const team = confA ? 'ANA' : 'OPP';
@@ -3531,15 +3567,47 @@ TvCore.prototype.step = function (f, t) {
   const newG = confA ? newA : newO;
   const th = this.tmplHist[team];
   const isRevert = th.length >= 2 && tvDist(newG, th[th.length - 2]) < thr * 0.6;   // score went back = goal overturned
-  const b = this.base; const beforeG = Float32Array.from(confA ? b.ana : b.opp);
-  if (confA) { b.ana = newA; b.shA = tvShifts(newA); b.conA = tvContrast(newA); } else { b.opp = newO; b.shO = tvShifts(newO); b.conO = tvContrast(newO); }
-  this.hist = [];
+  const beforeG = Float32Array.from(confA ? b.ana : b.opp);
+  absorb(confA);
+  this.hist = []; this.soft = null;
   if (isRevert) { th.pop(); ev.push({ type: 'revert', team, before: beforeG, after: newG }); return ev; }
   th.push(newG); if (th.length > 4) th.shift();
   this.coolUntil[team] = t + c.cooldownMs;
-  ev.push({ type: 'goal', team, diff: confA ? dA : dO, before: beforeG, after: newG });
+  ev.push({ type: 'goal', team, diff: dBig, before: beforeG, after: newG });
   return ev;
 };
+
+// ==TVANIM START==
+// ---- goal-graphic matcher: recognises the big "goal" graphic the broadcast lays over the score bar (learned from a recording) ----
+function tvAnimVec(f) {                                  // the three box pictures as one zero-mean, unit-length vector per box, joined
+  const a = tvZ(f.ana), o = tvZ(f.opp), c = tvZ(f.anc), v = new Float32Array(TVW_N * 3);
+  v.set(a, 0); v.set(o, TVW_N); v.set(c, TVW_N * 2); return v;
+}
+function TvAnim(cfg) { this.cfg = Object.assign({ min: 0.75, frames: 3, cooldownMs: 20000 }, cfg || {}); this.tpls = []; this.run = 0; this.coolUntil = 0; this.score = 0; }
+TvAnim.prototype.add = function (g) { this.tpls.push(tvAnimVec(g)); if (this.tpls.length > 48) this.tpls.shift(); };
+TvAnim.prototype.clear = function () { this.tpls = []; this.run = 0; this.score = 0; };
+TvAnim.prototype.step = function (f, t) {                // true once the graphic has matched for `frames` frames in a row
+  if (!this.tpls.length) { this.score = 0; return false; }
+  const v = tvAnimVec(f); let best = -1;
+  for (const p of this.tpls) { const s = tvDot(v, p) / 3; if (s > best) best = s; }
+  this.score = best;
+  if (best >= this.cfg.min) this.run++; else this.run = 0;
+  if (this.run >= this.cfg.frames && t >= this.coolUntil) { this.coolUntil = t + this.cfg.cooldownMs; this.run = 0; return true; }
+  return false;
+};
+// buf = recent [{t, g:{ana,opp,anc}, nonbar}]. Picks frames from the last spanMs where the score bar is clearly NOT showing
+// (so the goal graphic, not the bar), at least 250 ms apart and not flat/blank, newest first.
+function tvAnimPick(buf, now, spanMs, maxN) {
+  const out = []; let lastT = Infinity;
+  for (let i = buf.length - 1; i >= 0 && out.length < maxN; i--) {
+    const b = buf[i]; if (now - b.t > spanMs) break;
+    if (!b.nonbar || lastT - b.t < 250) continue;
+    if (Math.max(tvContrast(b.g.ana), tvContrast(b.g.opp), tvContrast(b.g.anc)) < 25) continue;
+    out.push(b.g); lastT = b.t;
+  }
+  return out;
+}
+// ==TVANIM END==
 
 // ===================== TV WATCH (experimental) =====================
 // The iPad camera watches the score bar on the TV. When a score digit changes on the video itself,
@@ -3556,6 +3624,53 @@ const tvw = {
   frozenAt: 0, lastCT: -1, lastCTAt: 0, sameN: 0, lastSig: null, lastRestartAt: 0, hiddenAt: 0, camLabel: ''
 };
 const TVW_MATCH_MS = 90000, TVW_QUIET_MS = 600000;
+
+// ---- goal graphic: learned from a recording, then spotted live as an early Ducks-goal trigger ----
+tvw.anim = { m: new TvAnim(), grays: [], marks: 0, boxes: null, buf: [], msg: '' };
+function tvwAnimPack(g) { const b = new Uint8Array(TVW_N * 3); ['ana', 'opp', 'anc'].forEach((k, j) => { for (let i = 0; i < TVW_N; i++) b[j * TVW_N + i] = Math.max(0, Math.min(255, Math.round(g[k][i]))); }); let s = ''; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); }
+function tvwAnimUnpack(str) { const raw = atob(str), o = {}; ['ana', 'opp', 'anc'].forEach((k, j) => { o[k] = new Float32Array(TVW_N); for (let i = 0; i < TVW_N; i++) o[k][i] = raw.charCodeAt(j * TVW_N + i); }); return o; }
+function tvwAnimSave() { try { localStorage.setItem('ducksTvwAnim', JSON.stringify({ boxes: tvw.anim.boxes, frames: tvw.anim.grays.map(tvwAnimPack), marks: tvw.anim.marks })); } catch (e) {} }
+try {
+  const raw = JSON.parse(localStorage.getItem('ducksTvwAnim') || 'null');
+  if (raw && raw.boxes && Array.isArray(raw.frames)) { tvw.anim.boxes = raw.boxes; tvw.anim.marks = raw.marks || 0; for (const str of raw.frames) { const g = tvwAnimUnpack(str); tvw.anim.grays.push(g); tvw.anim.m.add(g); } }
+} catch (e) {}
+function tvwAnimValid() {                                // the learned pictures only fit if the boxes are exactly where they were when learning
+  const A = tvw.anim; if (!A.boxes || !A.m.tpls.length) return false;
+  return ['ana', 'opp', 'anc'].every(k => A.boxes[k] && ['x', 'y', 'w', 'h'].every(p => Math.abs(A.boxes[k][p] - tvw.boxes[k][p]) < 0.0015));
+}
+function tvwAnimTick(f, now) {
+  const A = tvw.anim, c = tvw.core, d = (c && c.dbg) || {};
+  A.buf.push({ t: now, g: f, nonbar: !!(c && c.base && (c.vis === false || (d.ncc !== undefined && d.ncc < 0.35))) });
+  while (A.buf.length && now - A.buf[0].t > 6000) A.buf.shift();
+  if (!tvwAnimValid()) { A.m.score = 0; return; }
+  if (A.m.step(f, now)) tvwAnimTrigger(A.m.score, now);
+}
+function tvwAnimTrigger(score, now) {
+  tvw.animAt = now;
+  gameLogEntry('CAM_ANIM', { score: +score.toFixed(2), mode: tvw.mode });
+  addLog('📷 Goal graphic spotted on the TV (match ' + score.toFixed(2) + ')');
+  tvwGoal('ANA', { via: 'anim', diff: score });
+}
+function tvwAnimMark() {                                 // the person taps while the goal graphic is on screen
+  const A = tvw.anim; A.msg = '';
+  if (!tvw.running || !tvw.core || !tvw.core.base) { A.msg = 'Start the camera and let it learn the score bar first.'; tvwAnimInfo(); return; }
+  if (A.boxes && !tvwAnimValid()) { A.m.clear(); A.grays = []; A.marks = 0; A.boxes = null; }   // boxes moved since last time: start over
+  const picks = tvAnimPick(A.buf, Date.now(), 3000, 12);
+  if (picks.length < 3) { A.msg = 'Did not see the score bar disappear. Tap while the goal graphic is covering it.'; tvwAnimInfo(); return; }
+  for (const g of picks) { A.m.add(g); A.grays.push(g); if (A.grays.length > 48) A.grays.shift(); }
+  A.marks++; A.boxes = JSON.parse(JSON.stringify(tvw.boxes)); tvwAnimSave();
+  gameLogEntry('CAM_LEARN', { frames: picks.length, total: A.m.tpls.length, marks: A.marks });
+  A.msg = 'Learned ' + picks.length + ' pictures. Tap again on another goal to teach it more.'; tvwAnimInfo();
+}
+function tvwAnimClear() { const A = tvw.anim; A.m.clear(); A.grays = []; A.marks = 0; A.boxes = null; A.msg = 'Cleared.'; try { localStorage.removeItem('ducksTvwAnim'); } catch (e) {} tvwAnimInfo(); }
+function tvwLearnToggle() { const p = document.getElementById('tvwLearn'); if (!p) return; p.style.display = p.style.display === 'none' ? 'flex' : 'none'; tvwAnimInfo(); }
+function tvwAnimInfo() {
+  const A = tvw.anim, el = document.getElementById('tvwLearnInfo'); if (!el) return;
+  const n = A.m.tpls.length, valid = tvwAnimValid(), sc = A.m.score || 0;
+  let t = !n ? 'Nothing learned yet.' : (valid ? 'Learned ' + n + ' pictures from ' + A.marks + ' tap(s). Match now: <b style="color:' + (sc >= A.m.cfg.min ? '#22c55e' : '#9ca3af') + '">' + sc.toFixed(2) + '</b> (needs ' + A.m.cfg.min.toFixed(2) + ')' : '<span style="color:#f59e0b">The boxes moved since learning — tap the green button again to re-learn.</span>');
+  if (A.msg) t += '<br>' + A.msg;
+  el.innerHTML = t;
+}
 function tvwArmed() { return tvw.mode === 'live' && tvw.trust.matches >= 1 && Date.now() - tvw.trust.lastBad > TVW_QUIET_MS; }
 function tvwB64(g) {   // a 24x32 grey picture as a short string, so the log can show what the camera saw
   const b = new Uint8Array(g.length); for (let i = 0; i < g.length; i++) b[i] = Math.max(0, Math.min(255, Math.round(g[i])));
@@ -3585,7 +3700,7 @@ function tvwUi() {
   const c = tvw.core, d = c ? c.dbg : {};
   if (!c || !c.base) { st.textContent = 'Learning the score bar…'; if (dbg) dbg.textContent = 'Hold still: the score bar must be visible and steady for ~2 s'; return; }
   st.textContent = tvw.frozenAt ? 'Camera frozen — restarting…' : (c.vis === false ? 'Score bar hidden' : 'Watching');
-  if (dbg && d.ncc !== undefined) dbg.textContent = (tvw.camLabel ? tvw.camLabel + ' · ' : '') + 'matched goals ' + tvw.trust.matches + ' · bar match ' + d.ncc.toFixed(2) + (d.dA !== undefined ? ' · Ducks Δ' + d.dA.toFixed(2) + ' · Opp Δ' + d.dO.toFixed(2) + ' · trigger at ' + d.thr.toFixed(2) : '');
+  if (dbg && d.ncc !== undefined) dbg.textContent = (tvw.camLabel ? tvw.camLabel + ' · ' : '') + 'matched goals ' + tvw.trust.matches + ' · goal graphic ' + (tvwAnimValid() ? 'learned ✓' : (tvw.anim && tvw.anim.m.tpls.length ? 're-learn (boxes moved)' : 'not learned')) + ' · bar match ' + d.ncc.toFixed(2) + (d.dA !== undefined ? ' · Ducks Δ' + d.dA.toFixed(2) + ' · Opp Δ' + d.dO.toFixed(2) + ' · trigger at ' + d.thr.toFixed(2) : '');
 }
 
 async function tvwStartStream() {
@@ -3715,7 +3830,7 @@ function tvwTick() {
     const f = ready ? { ana: tvwSample(tvw.boxes.ana), opp: tvwSample(tvw.boxes.opp), anc: tvwSample(tvw.boxes.anc) } : null;
     if (f) tvwFilmPush(f, now);
     const frozen = tvwWatchdog(v, now, f);
-    if (!frozen && f) for (const e of tvw.core.step(f, now)) tvwEvent(e, now);
+    if (!frozen && f) { for (const e of tvw.core.step(f, now)) tvwEvent(e, now); tvwAnimTick(f, now); }
     if (now - tvw.lastUiAt > 400) { tvw.lastUiAt = now; tvwUi(); }
     if (now - tvw.lastLogAt > 60000 && tvw.core.base) { tvw.lastLogAt = now; const d = tvw.core.dbg; gameLogEntry('CAM_DBG', { ncc: +(d.ncc || 0).toFixed(2), dA: +(d.dA || 0).toFixed(3), dO: +(d.dO || 0).toFixed(3), thr: +(d.thr || 0).toFixed(3), visible: tvw.core.vis, frozen: !!tvw.frozenAt, armed: tvwArmed(), matches: tvw.trust.matches }); }
   } catch (e) { gameLogEntry('CAM_ERROR', { msg: String(e && e.message || e) }); }
@@ -3729,6 +3844,9 @@ function tvwEvent(e, now) {
   }
   else if (e.type === 'rebase') { gameLogEntry('CAM_REBASE', { reason: e.reason, dA: +(e.dA || 0).toFixed(2), dO: +(e.dO || 0).toFixed(2) }); addLog('📷 Score bar changed look — re-learned, no alert'); }
   else if (e.type === 'revert') { gameLogEntry('CAM_REVERT', { team: e.team, before: tvwB64(e.before), after: tvwB64(e.after) }); addLog('📷 ' + e.team + ' score went back — no alert'); }
+  else if (e.type === 'small') {                         // a tiny change in a digit box (e.g. the shots counter): ignored, but logged so a swallowed goal can be spotted
+    if (now - (tvw.lastSmallAt || 0) > 5000) { tvw.lastSmallAt = now; gameLogEntry('CAM_SMALL', { team: e.team, diff: +(e.diff || 0).toFixed(3) }); }
+  }
   else if (e.type === 'goal') tvwGoal(e.team, { diff: e.diff, before: e.before, after: e.after });
 }
 
@@ -3747,6 +3865,9 @@ function tvwSweep() {
 function tvwGoal(team, info) {
   tvwSweep();
   const now = Date.now(), ah = tvw.ahead[team];
+  if (team === 'ANA' && !(info && info.via === 'anim') && tvw.animAt && now - tvw.animAt < 60000) {   // the goal graphic already raised this one
+    gameLogEntry('CAM_GOAL_DUP', { team, sinceAnimMs: now - tvw.animAt }); addLog('📷 Score changed on the TV — already handled from the goal graphic'); return;
+  }
   if (ah.length) {                         // ESPN already alerted for this goal: the TV just caught up
     const a = ah.shift();
     const matched = now - a <= TVW_MATCH_MS; if (matched) { tvw.trust.matches++; tvwUi(); }
@@ -3755,7 +3876,7 @@ function tvwGoal(team, info) {
     return;
   }
   const live = tvwArmed();
-  gameLogEntry('CAM_GOAL', { team, live, mode: tvw.mode, armed: live, matches: tvw.trust.matches, diff: info && info.diff, test: !!(info && info.test),
+  gameLogEntry('CAM_GOAL', { team, live, mode: tvw.mode, armed: live, matches: tvw.trust.matches, diff: info && info.diff, via: (info && info.via) || 'digit', test: !!(info && info.test),
     before: info && info.before ? tvwB64(info.before) : undefined, after: info && info.after ? tvwB64(info.after) : undefined });
   tvw.pend[team].push({ t: now, live });
   if (!live) { addLog('📷 [' + (tvw.mode === 'live' ? 'LIVE not armed yet' : 'shadow') + '] TV shows a ' + team + ' goal — logged only'); return; }
@@ -3878,6 +3999,7 @@ function tvwQualityShow() {
 function tvwPreview() {                                  // little pictures of what each box currently contains
   const v = tvwEl('tvwVideo'); if (!v || !v.videoWidth) return;
   try { tvwQualityUpdate(); } catch (e) {}
+  try { const p = document.getElementById('tvwLearn'); if (p && p.style.display !== 'none') tvwAnimInfo(); } catch (e) {}
   for (const [k] of TVW_BOXES) {
     const c = tvwEl('tvwTh_' + k); if (!c || !c.getContext) continue; const b = tvw.boxes[k];
     try { c.getContext('2d').drawImage(v, b.x * v.videoWidth, b.y * v.videoHeight, b.w * v.videoWidth, b.h * v.videoHeight, 0, 0, c.width, c.height); } catch (e) {}

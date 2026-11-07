@@ -1300,7 +1300,7 @@
 
       <div class="help-section">
         <div class="help-section-title">TV Watch (experimental)</div>
-        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and place the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Tap a box button to select it and zoom in, then drag the box or use the arrow, width and height buttons for 1-pixel adjustments (pinch or scroll to zoom, drag the background to move the picture). The small pictures show what the detector sees in each box. Each box turns green with a ✓ when its picture should read well, amber with a ⚠ when it is usable but not ideal, and red with a ✕ when it needs fixing (digit cut off, other text inside, too small or faint, background too busy, or the picture shaking); the line under the buttons says what to change. It checks picture quality only — it cannot tell whether the digit is the right one. Goal graphic: when the broadcast covers the score bar with its big goal graphic, the app can spot it and treat it as an early Ducks goal (several seconds before the new score appears). Teach it first: set the boxes, tap “🎬 Goal graphic”, play a Ducks goal from a full replay of the same broadcast and tap the green button while the graphic is on screen; it only works with the boxes and camera exactly as they were when you taught it, and it covers Ducks goals only. The detector ignores tiny changes (like the shots-on-goal counter), acts quickly on a clearly different digit, and waits about 3 extra seconds before trusting a change that only looks slightly different (such as 5 to 6); ignored changes are noted in the log as CAM_SMALL. While the camera runs, a <strong>🎥 Goal capture</strong> button appears next to ↓ Log on the main screen: tap it while the goal graphic is covering the score bar and it teaches the graphic (same as the green button in set-up) and saves the last minute of camera footage to the log; tap it any time the bar is showing to save footage only. The game log also saves a short film of the three boxes each time the data feed reports a goal and each time the camera itself sees one (CAM_FILM) — send the log along so the detector can be tuned on real footage. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
+        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and place the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Tap a box button to select it and zoom in, then drag the box or use the arrow, width and height buttons for 1-pixel adjustments (pinch or scroll to zoom, drag the background to move the picture). The small pictures show what the detector sees in each box. Each box turns green with a ✓ when its picture should read well, amber with a ⚠ when it is usable but not ideal, and red with a ✕ when it needs fixing (digit cut off, other text inside, too small or faint, background too busy, or the picture shaking); the line under the buttons says what to change. It checks picture quality only — it cannot tell whether the digit is the right one. Goal graphic: when the broadcast covers the score bar with its big goal graphic, the app can spot it and treat it as an early Ducks goal (several seconds before the new score appears). Teach it first: set the boxes, tap “🎬 Goal graphic”, play a Ducks goal from a full replay of the same broadcast and tap the green button while the graphic is on screen; it only works with the boxes and camera exactly as they were when you taught it, and it covers Ducks goals only. The detector ignores tiny changes (like the shots-on-goal counter), acts quickly on a clearly different digit, and waits about 3 extra seconds before trusting a change that only looks slightly different (such as 5 to 6); ignored changes are noted in the log as CAM_SMALL. While the camera runs, the <strong>🎥 Goal capture</strong> button next to ↓ Log on the main screen (dimmed until the camera is running): tap it while the goal graphic is covering the score bar and it teaches the graphic (same as the green button in set-up) and saves the last minute of camera footage to the log; if you tap it while the bar is showing, it arms for 15 seconds and learns the next goal graphic that covers the bar (tap again to cancel), and either way it saves footage. While the camera runs the app also keeps checking the boxes: if a digit box starts holding another number (such as the shots-on-goal counter) it warns you and logs CAM_QUALITY (a warning only — it does not block LIVE). The game log also saves a short film of the three boxes each time the data feed reports a goal and each time the camera itself sees one (CAM_FILM) — send the log along so the detector can be tuned on real footage. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
       </div>
 
       <div class="help-section">
@@ -1601,7 +1601,7 @@
     <button class="btn btn-test" onclick="testLoss()" style="border-color:rgba(255,255,255,0.12);color:rgba(255,255,255,0.3);">Test Loss</button>
     <button class="btn btn-test" onclick="testPenaltyToast()" style="border-color:rgba(250,204,21,0.4);color:#facc15;">Test Pen</button>
     <button class="btn btn-test" onclick="downloadGameLog()" style="border-color:rgba(100,200,100,0.4);color:#4ade80;">↓ Log</button>
-    <button class="btn btn-test" id="tvwCapBtn" onclick="tvwCapture()" style="display:none;border-color:rgba(250,204,21,0.5);color:#facc15;">🎥 Goal capture</button>
+    <button class="btn btn-test" id="tvwCapBtn" onclick="tvwCapture()" style="opacity:.45;border-color:rgba(250,204,21,0.5);color:#facc15;">🎥 Goal capture</button>
   </div>
 
   <button class="btn btn-kill" onclick="killSound()" title="Kill all sound" style="width:100%;margin-top:-0.25rem;">&#9646;&#9646; Kill Audio</button>
@@ -1727,7 +1727,7 @@ function setApiClock(secs) {
 }
 function periodStartSecs() { return currentApiPeriod > 3 ? 4 * 60 + 59 : 19 * 60 + 59; } // OT = 5:00 (regular season)
 
-const BUILD_ID = 'dev-2026-11-06c';
+const BUILD_ID = 'dev-2026-11-06e';
 // Goal alerts are driven by ESPN's SCORE, which trails the game clock by ~10-20 s, and the stream delay is tuned
 // against that lag. The 0:00 end-of-game trigger is driven by the CLOCK (no such lag), so it needs this extra time.
 const END_GAME_EXTRA_MS = 18000;
@@ -3614,6 +3614,7 @@ function tvAnimPick(buf, now, spanMs, maxN) {
 // The iPad camera watches the score bar on the TV. When a score digit changes on the video itself,
 // that is the goal — no feed lag, no stream-delay guessing. ESPN stays on as the backup/confirmation.
 const tvw = {
+  qm: { last: 0, bad: 0, good: 0, flagged: false, msg: '' },
   core: null, stream: null, timer: null, running: false, setupOpen: false,
   mode: 'shadow',                 // 'shadow' = log only, 'live' = fire alerts
   facing: 'environment', deviceId: '',
@@ -3643,6 +3644,19 @@ function tvwAnimTick(f, now) {
   const A = tvw.anim, c = tvw.core, d = (c && c.dbg) || {};
   A.buf.push({ t: now, g: f, nonbar: !!(c && c.base && (c.vis === false || (d.ncc !== undefined && d.ncc < 0.35))) });
   while (A.buf.length && now - A.buf[0].t > 6000) A.buf.shift();
+  if (A.armUntil) {                                      // capture button was tapped early: learn from the next graphic that covers the bar
+    if (now > A.armUntil) { A.armUntil = 0; gameLogEntry('CAM_CAPTURE_EXPIRED', {}); addLog('🎥 Capture timed out — no goal graphic appeared'); tvwUi(); }
+    else {
+      let i = A.buf.length - 1; while (i >= 0 && A.buf[i].nonbar) i--;
+      const span = A.buf.length ? A.buf[A.buf.length - 1].t - A.buf[i + 1 < A.buf.length ? i + 1 : A.buf.length - 1].t : 0;
+      if (i < A.buf.length - 1 && span >= 2000) {
+        A.armUntil = 0; const before = A.marks, ok = tvwAnimMark();
+        gameLogEntry('CAM_CAPTURE', { learned: ok, armed: true, templates: A.m.tpls.length });
+        addLog(ok ? '🎥 Captured: goal graphic learned (' + A.m.tpls.length + ' pictures)' : '🎥 The bar was hidden but nothing usable was learned');
+        A.flash = ok ? 'learned' : 'failed'; setTimeout(() => { A.flash = ''; tvwUi(); }, 2500); tvwUi();
+      }
+    }
+  }
   if (!tvwAnimValid()) { A.m.score = 0; return; }
   if (A.m.step(f, now)) tvwAnimTrigger(A.m.score, now);
 }
@@ -3654,22 +3668,24 @@ function tvwAnimTrigger(score, now) {
 }
 function tvwAnimMark() {                                 // the person taps while the goal graphic is on screen
   const A = tvw.anim; A.msg = '';
-  if (!tvw.running || !tvw.core || !tvw.core.base) { A.msg = 'Start the camera and let it learn the score bar first.'; tvwAnimInfo(); return; }
+  if (!tvw.running || !tvw.core || !tvw.core.base) { A.msg = 'Start the camera and let it learn the score bar first.'; tvwAnimInfo(); return false; }
   if (A.boxes && !tvwAnimValid()) { A.m.clear(); A.grays = []; A.marks = 0; A.boxes = null; }   // boxes moved since last time: start over
   const picks = tvAnimPick(A.buf, Date.now(), 3000, 12);
-  if (picks.length < 3) { A.msg = 'Did not see the score bar disappear. Tap while the goal graphic is covering it.'; tvwAnimInfo(); return; }
+  if (picks.length < 3) { A.msg = 'Did not see the score bar disappear. Tap while the goal graphic is covering it.'; tvwAnimInfo(); return false; }
   for (const g of picks) { A.m.add(g); A.grays.push(g); if (A.grays.length > 48) A.grays.shift(); }
   A.marks++; A.boxes = JSON.parse(JSON.stringify(tvw.boxes)); tvwAnimSave();
   gameLogEntry('CAM_LEARN', { frames: picks.length, total: A.m.tpls.length, marks: A.marks });
   A.msg = 'Learned ' + picks.length + ' pictures. Tap again on another goal to teach it more.'; tvwAnimInfo();
+  return true;
 }
-function tvwCapture() {                                  // main-screen button: teach the goal graphic (if it is on screen) and save the last minute of camera footage to the log
+function tvwCapture() {                                  // main-screen button: teach the goal graphic and save the last minute of camera footage to the log
   if (!tvw.running) { addLog('📷 Start the camera first (TV Watch card)', false, true); return; }
-  const A = tvw.anim, before = A.marks; tvwAnimMark();
-  const learned = A.marks > before;
-  gameLogEntry('CAM_CAPTURE', { learned, templates: A.m.tpls.length, barVisible: !!(tvw.core && tvw.core.vis !== false) });
-  addLog(learned ? '🎥 Captured: goal graphic learned (' + A.m.tpls.length + ' pictures) — saving footage to the log in a few seconds' : '🎥 Saving footage to the log (the score bar was showing, so no graphic was learned)');
-  const b = document.getElementById('tvwCapBtn'); if (b) { b.textContent = learned ? '🎥 Learned ✓' : '🎥 Saved ✓'; setTimeout(() => { b.textContent = '🎥 Goal capture'; }, 2500); }
+  const A = tvw.anim; if (A.armUntil) { A.armUntil = 0; addLog('🎥 Capture cancelled'); tvwUi(); return; }   // tap again to cancel
+  const ok = tvwAnimMark();
+  gameLogEntry('CAM_CAPTURE', { learned: ok, templates: A.m.tpls.length, barVisible: !!(tvw.core && tvw.core.vis !== false) });
+  if (ok) { addLog('🎥 Captured: goal graphic learned (' + A.m.tpls.length + ' pictures) — saving footage to the log in a few seconds'); A.flash = 'learned'; setTimeout(() => { A.flash = ''; tvwUi(); }, 2500); }
+  else if (tvw.core && tvw.core.base) { A.armUntil = Date.now() + 15000; addLog('🎥 Armed — it will learn the next goal graphic that covers the score bar (15 s). Tap again to cancel.'); }
+  tvwUi();
   setTimeout(() => { try { tvwFilmDump('ANA', 'manual', true); } catch (e) {} }, 8000);   // wait so the footage includes the bar coming back with the new score
 }
 function tvwAnimClear() { const A = tvw.anim; A.m.clear(); A.grays = []; A.marks = 0; A.boxes = null; A.msg = 'Cleared.'; try { localStorage.removeItem('ducksTvwAnim'); } catch (e) {} tvwAnimInfo(); }
@@ -3705,13 +3721,13 @@ function tvwUi() {
     mb.style.color = tvw.mode === 'live' ? (armed ? '#22c55e' : '#fb923c') : '#facc15';
   }
   if (sb) sb.textContent = tvw.running ? '■ Stop camera' : '▶ Start camera';
-  const cb = document.getElementById('tvwCapBtn'); if (cb) cb.style.display = tvw.running ? '' : 'none';
+  const cb = document.getElementById('tvwCapBtn'); if (cb) { cb.style.opacity = tvw.running ? '1' : '.45'; const A = tvw.anim; cb.textContent = A.armUntil ? '🎥 Armed — waiting for graphic…' : (A.flash === 'learned' ? '🎥 Learned ✓' : A.flash === 'failed' ? '🎥 Nothing learned' : '🎥 Goal capture'); }
   if (!st) return;
   if (!tvw.running) { st.textContent = 'Off'; if (dbg) dbg.textContent = '—'; return; }
   const c = tvw.core, d = c ? c.dbg : {};
   if (!c || !c.base) { st.textContent = 'Learning the score bar…'; if (dbg) dbg.textContent = 'Hold still: the score bar must be visible and steady for ~2 s'; return; }
   st.textContent = tvw.frozenAt ? 'Camera frozen — restarting…' : (c.vis === false ? 'Score bar hidden' : 'Watching');
-  if (dbg && d.ncc !== undefined) dbg.textContent = (tvw.camLabel ? tvw.camLabel + ' · ' : '') + 'matched goals ' + tvw.trust.matches + ' · goal graphic ' + (tvwAnimValid() ? 'learned ✓' : (tvw.anim && tvw.anim.m.tpls.length ? 're-learn (boxes moved)' : 'not learned')) + ' · bar match ' + d.ncc.toFixed(2) + (d.dA !== undefined ? ' · Ducks Δ' + d.dA.toFixed(2) + ' · Opp Δ' + d.dO.toFixed(2) + ' · trigger at ' + d.thr.toFixed(2) : '');
+  if (dbg && d.ncc !== undefined) dbg.textContent = (tvw.camLabel ? tvw.camLabel + ' · ' : '') + 'matched goals ' + tvw.trust.matches + ' · goal graphic ' + (tvwAnimValid() ? 'learned ✓' : (tvw.anim && tvw.anim.m.tpls.length ? 're-learn (boxes moved)' : 'not learned')) + ' · bar match ' + d.ncc.toFixed(2) + (tvw.qm.flagged ? ' · ⚠ BOXES NEED FIXING: ' + tvw.qm.msg : '') + (d.dA !== undefined ? ' · Ducks Δ' + d.dA.toFixed(2) + ' · Opp Δ' + d.dO.toFixed(2) + ' · trigger at ' + d.thr.toFixed(2) : '');
 }
 
 async function tvwStartStream() {
@@ -3841,7 +3857,7 @@ function tvwTick() {
     const f = ready ? { ana: tvwSample(tvw.boxes.ana), opp: tvwSample(tvw.boxes.opp), anc: tvwSample(tvw.boxes.anc) } : null;
     if (f) tvwFilmPush(f, now);
     const frozen = tvwWatchdog(v, now, f);
-    if (!frozen && f) { for (const e of tvw.core.step(f, now)) tvwEvent(e, now); tvwAnimTick(f, now); }
+    if (!frozen && f) { for (const e of tvw.core.step(f, now)) tvwEvent(e, now); tvwAnimTick(f, now); tvwQMon(f, now); }
     if (now - tvw.lastUiAt > 400) { tvw.lastUiAt = now; tvwUi(); }
     if (now - tvw.lastLogAt > 60000 && tvw.core.base) { tvw.lastLogAt = now; const d = tvw.core.dbg; gameLogEntry('CAM_DBG', { ncc: +(d.ncc || 0).toFixed(2), dA: +(d.dA || 0).toFixed(3), dO: +(d.dO || 0).toFixed(3), thr: +(d.thr || 0).toFixed(3), visible: tvw.core.vis, frozen: !!tvw.frozenAt, armed: tvwArmed(), matches: tvw.trust.matches }); }
   } catch (e) { gameLogEntry('CAM_ERROR', { msg: String(e && e.message || e) }); }
@@ -4111,6 +4127,18 @@ function tvwQuality(g, kind, info) {
   let bs = 0, bn = 0, bm = 0; for (let i = 0; i < N; i++) if (!m[i]) { bs += g[i]; bn++; }
   if (bn) { bm = bs / bn; let v = 0; for (let i = 0; i < N; i++) if (!m[i]) v += (g[i] - bm) * (g[i] - bm); if (Math.sqrt(v / bn) / dcon > 0.3) flag('warn', 'background is busy — the picture shows through the bar'); }
   return res;
+}
+// Watches the boxes during the game: a box that was fine at set-up can start holding a second number (e.g. the shots counter) once play starts.
+function tvwQMon(f, now) {
+  const q = tvw.qm; if (now - q.last < 500) return; q.last = now;
+  const c = tvw.core, v = document.getElementById('tvwVideo'); if (!c || !c.base || c.vis === false || !v || !v.videoHeight) return;
+  const d = c.dbg || {}; if (d.ncc !== undefined && d.ncc < 0.5) return;           // only judge while the real score bar is on screen
+  const msgs = [];
+  for (const k of ['ana', 'opp']) { const r = tvwQuality(f[k], 'digit', { boxPxH: tvw.boxes[k].h * v.videoHeight }); if (r.level === 'bad') msgs.push((k === 'ana' ? 'Ducks' : 'Opp') + ' box: ' + r.msgs[0]); }
+  if (msgs.length) { q.bad++; q.good = 0; } else { q.good++; if (q.good >= 6) q.bad = 0; }
+  if (!q.flagged && q.bad >= 20) { q.flagged = true; q.msg = msgs.join('; '); gameLogEntry('CAM_QUALITY', { level: 'bad', msgs }); addLog('⚠ TV Watch boxes need fixing: ' + q.msg + '', false, true); tvwUi(); }
+  else if (q.flagged && q.good >= 20) { q.flagged = false; q.msg = ''; q.bad = 0; gameLogEntry('CAM_QUALITY', { level: 'good' }); addLog('📷 Boxes look fine again'); tvwUi(); }
+  else if (q.flagged && msgs.length) q.msg = msgs.join('; ');
 }
 // ==TVQ END==
 

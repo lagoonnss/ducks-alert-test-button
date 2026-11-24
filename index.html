@@ -1300,7 +1300,7 @@
 
       <div class="help-section">
         <div class="help-section-title">TV Watch (experimental)</div>
-        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and place the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Tap a box button to select it and zoom in, then drag the box or use the arrow, width and height buttons for 1-pixel adjustments (pinch or scroll to zoom, drag the background to move the picture). The small pictures show what the detector sees in each box. Each box turns green with a ✓ when its picture should read well, amber with a ⚠ when it is usable but not ideal, and red with a ✕ when it needs fixing (digit cut off, other text inside, too small or faint, background too busy, or the picture shaking); the line under the buttons says what to change. It checks picture quality only — it cannot tell whether the digit is the right one. Goal graphic: when the broadcast covers the score bar with its big goal graphic, the app can spot it and treat it as an early Ducks goal (several seconds before the new score appears). Teach it first: set the boxes, tap “🎬 Goal graphic”, play a Ducks goal from a full replay of the same broadcast and tap the green button while the graphic is on screen; it only works with the boxes and camera exactly as they were when you taught it, and it covers Ducks goals only. The detector ignores tiny changes (like the shots-on-goal counter), acts quickly on a clearly different digit, and waits about 3 extra seconds before trusting a change that only looks slightly different (such as 5 to 6); ignored changes are noted in the log as CAM_SMALL. While the camera runs, the <strong>🎥 Goal capture</strong> button next to ↓ Log on the main screen (dimmed until the camera is running): tap it while the goal graphic is covering the score bar and it teaches the graphic (same as the green button in set-up) and saves the last minute of camera footage to the log; if you tap it while the bar is showing, it arms for 15 seconds and learns the next goal graphic that covers the bar (tap again to cancel), and either way it saves footage. When the camera starts the app tries to lock its autofocus (only possible where the browser and camera allow it; the result is logged as CAM_FOCUS and in the activity log, and the 1-minute CAM_DBG entries carry a sharpness number so focus hunting shows up in the log). The app keeps the graphic pictures from only your 2 most recent goals (more pictures made it match the wrong things). You can also teach the graphic from a saved game log: in set-up open 🎬 Goal graphic and tap 📂 Learn from a saved log file. It finds the camera footage the log saved around each feed-confirmed Ducks goal and learns the banner from it (it offers to move your boxes to the log's positions if they differ). Small score-digit changes under about 0.15 are now treated as noise and never count as a goal. While the camera runs the app also keeps checking the boxes: if a digit box starts holding another number (such as the shots-on-goal counter) it warns you and logs CAM_QUALITY (a warning only — it does not block LIVE). The game log also saves a short film of the three boxes each time the data feed reports a goal and each time the camera itself sees one (CAM_FILM) — send the log along so the detector can be tuned on real footage. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
+        <div class="help-section-text">Uses the iPad camera to watch the score bar on your TV. When a score number changes on the picture itself, that is the goal — no data-feed lag and no delay to tune. Tap <strong>⚙ Set up boxes</strong>, aim the iPad at the score bar and place the three boxes: yellow on the Ducks score, orange on the opponent score, blue on the Ducks logo. Tap a box button to select it and zoom in, then drag the box or use the arrow, width and height buttons for 1-pixel adjustments (pinch or scroll to zoom, drag the background to move the picture). The small pictures show what the detector sees in each box. Each box turns green with a ✓ when its picture should read well, amber with a ⚠ when it is usable but not ideal, and red with a ✕ when it needs fixing (digit cut off, other text inside, too small or faint, background too busy, or the picture shaking); the line under the buttons says what to change. It checks picture quality only — it cannot tell whether the digit is the right one. Goal graphic: when the broadcast covers the score bar with its big goal graphic, the app can spot it and treat it as an early Ducks goal (several seconds before the new score appears). Teach it first: set the boxes, tap “🎬 Goal graphic”, play a Ducks goal from a full replay of the same broadcast and tap the green button while the graphic is on screen; it only works with the boxes and camera exactly as they were when you taught it, and it covers Ducks goals only. The detector ignores tiny changes (like the shots-on-goal counter), acts quickly on a clearly different digit, and waits about 3 extra seconds before trusting a change that only looks slightly different (such as 5 to 6); ignored changes are noted in the log as CAM_SMALL. While the camera runs, the <strong>🎥 Goal capture</strong> button next to ↓ Log on the main screen (dimmed until the camera is running): tap it while the goal graphic is covering the score bar and it teaches the graphic (same as the green button in set-up) and saves the last minute of camera footage to the log; if you tap it while the bar is showing, it arms for 15 seconds and learns the next goal graphic that covers the bar (tap again to cancel), and either way it saves footage. When the camera starts the app tries to lock its autofocus (only possible where the browser and camera allow it; the result is logged as CAM_FOCUS and in the activity log, and the 1-minute CAM_DBG entries carry a sharpness number so focus hunting shows up in the log). The app keeps the graphic pictures from only your 2 most recent goals (more pictures made it match the wrong things). A graphic match is ignored while the score bar is plainly still on screen, or while the picture is black or fading in; after a match, graphic matching pauses for 60 seconds (the score-digit detector and the data feed keep working). Around every goal and every trigger the app also saves a small picture of the whole camera view about twice a second (last 30 s, as CAM_SNAP entries in the log, up to about 20 events and 6 MB per game) so the whole banner, replays and commercials can be looked at afterwards; if saving them ever slows the camera it switches itself off and notes CAM_SNAP_OFF. These pictures are of whatever the camera sees, so keep the room out of the shot. You can also teach the graphic from a saved game log: in set-up open 🎬 Goal graphic and tap 📂 Learn from a saved log file. It finds the camera footage the log saved around each feed-confirmed Ducks goal and learns the banner from it (it offers to move your boxes to the log's positions if they differ). Small score-digit changes under about 0.15 are now treated as noise and never count as a goal. While the camera runs the app also keeps checking the boxes: if a digit box starts holding another number (such as the shots-on-goal counter) it warns you and logs CAM_QUALITY (a warning only — it does not block LIVE). The game log also saves a short film of the three boxes each time the data feed reports a goal and each time the camera itself sees one (CAM_FILM) — send the log along so the detector can be tuned on real footage. Then tap <strong>▶ Start camera</strong>. The score shown in the app always comes from the data feed — the camera only triggers the alert. <strong>SHADOW</strong> mode only records what the camera sees and compares it with the data feed (use it for the first game); <strong>LIVE</strong> mode fires the alert from the camera and the feed's later report is matched to it so nothing fires twice — but LIVE stays <em>not armed</em> (it only logs) until the camera has matched at least one real goal that the data feed confirmed, and it locks again for 10 minutes after any false alarm. If the camera picture freezes the app restarts it and warns you. The log records the camera in use and a tiny picture of what changed at each camera goal. If the score bar disappears (replays, commercials) the camera waits for it to come back. The <strong>Camera</strong> list lets you pick another camera, such as a USB webcam plugged into the iPad (iPadOS 17 or later, USB-C iPad). Keep the iPad steady and the screen on; use <strong>↺ Re-learn</strong> if it gets bumped.</div>
       </div>
 
       <div class="help-section">
@@ -1729,7 +1729,7 @@ function setApiClock(secs) {
 }
 function periodStartSecs() { return currentApiPeriod > 3 ? 4 * 60 + 59 : 19 * 60 + 59; } // OT = 5:00 (regular season)
 
-const BUILD_ID = 'dev-2026-11-18a';
+const BUILD_ID = 'dev-2026-11-22c';
 // Goal alerts are driven by ESPN's SCORE, which trails the game clock by ~10-20 s, and the stream delay is tuned
 // against that lag. The 0:00 end-of-game trigger is driven by the CLOCK (no such lag), so it needs this extra time.
 const END_GAME_EXTRA_MS = 18000;
@@ -3586,11 +3586,12 @@ function tvAnimVec(f) {                                  // the three box pictur
   const a = tvZ(f.ana), o = tvZ(f.opp), c = tvZ(f.anc), v = new Float32Array(TVW_N * 3);
   v.set(a, 0); v.set(o, TVW_N); v.set(c, TVW_N * 2); return v;
 }
-function TvAnim(cfg) { this.cfg = Object.assign({ min: 0.75, frames: 3, cooldownMs: 20000 }, cfg || {}); this.tpls = []; this.run = 0; this.coolUntil = 0; this.score = 0; }
+function TvAnim(cfg) { this.cfg = Object.assign({ min: 0.75, frames: 3, cooldownMs: 60000 }, cfg || {}); this.tpls = []; this.run = 0; this.coolUntil = 0; this.score = 0; }
 TvAnim.prototype.add = function (g) { this.tpls.push(tvAnimVec(g)); if (this.tpls.length > 48) this.tpls.shift(); };
 TvAnim.prototype.clear = function () { this.tpls = []; this.run = 0; this.score = 0; };
-TvAnim.prototype.step = function (f, t) {                // true once the graphic has matched for `frames` frames in a row
+TvAnim.prototype.step = function (f, t, blocked) {       // true once the graphic has matched for `frames` frames in a row
   if (!this.tpls.length) { this.score = 0; return false; }
+  if (blocked) { this.score = 0; this.run = 0; return false; }   // the score bar is plainly on screen, or the picture is black: not a goal graphic
   const v = tvAnimVec(f); let best = -1;
   for (const p of this.tpls) { const s = tvDot(v, p) / 3; if (s > best) best = s; }
   this.score = best;
@@ -3669,7 +3670,14 @@ function tvwAnimTick(f, now) {
     }
   }
   if (!tvwAnimValid()) { A.m.score = 0; return; }
-  if (A.m.step(f, now)) tvwAnimTrigger(A.m.score, now);
+  // gate: a goal graphic covers the score bar. If the bar is clearly intact (logo matches what it looked like, bar not flagged hidden) or the picture is black, no match counts.
+  const intact = !!(c && c.base && c.vis !== false && d.ncc !== undefined && d.ncc >= 0.35), dark = tvwDark(f);
+  if (intact || dark) { A.gated = (A.gated || 0) + 1; }
+  if (A.m.step(f, now, intact || dark)) tvwAnimTrigger(A.m.score, now);
+}
+function tvwDark(f) {                                     // camera picture black / fading in: the logo box has almost no light or no contrast
+  const g = f.anc; let m = 0, q = 0, n = g.length; for (let i = 0; i < n; i++) m += g[i]; m /= n;
+  for (let i = 0; i < n; i++) q += (g[i] - m) * (g[i] - m); return m < 25 || Math.sqrt(q / n) < 20;
 }
 function tvwAnimTrigger(score, now) {
   tvw.animAt = now;
@@ -3904,7 +3912,31 @@ function tvwFilmDump(team, why, force) {
   if (!tvw.running || !tvw.film.length) return;
   const since = (tvw.filmLastDump && !force) ? tvw.filmLastDump - 4000 : 0, fr = tvw.film.filter(x => x[0] > since);
   tvw.filmLastDump = Date.now(); if (!fr.length) return;
+  try { tvwSnapDump(team, why); } catch (e) {}
   gameLogEntry('CAM_FILM', { team, why: why || 'espn', n: fr.length, note: '4-bit grey, two pixels per byte (high nibble first), 24x32 per box; frame = [ms, ana, opp, anchor]', frames: fr, boxes: tvw.boxes });
+}
+// ---- whole-picture snapshots: a small JPEG of the full camera view about twice a second (last 40 s kept), written to the log
+// around every trigger so the whole goal banner / replay / commercial can be seen later, not just the three boxes.
+const TVW_SNAP_STEP_MS = 500, TVW_SNAP_KEEP_MS = 40000, TVW_SNAP_W = 320, TVW_SNAP_MAX_BYTES = 6000000, TVW_SNAP_MAX_EVENTS = 24;
+tvw.snaps = []; tvw.snapLast = 0; tvw.snapBytes = 0; tvw.snapEvents = 0; tvw.snapSlow = 0; tvw.snapOff = false; tvw.snapCv = null;
+function tvwSnapPush(v, now) {
+  if (tvw.snapOff || now - tvw.snapLast < TVW_SNAP_STEP_MS) return; tvw.snapLast = now;
+  try {
+    if (!tvw.snapCv) tvw.snapCv = document.createElement('canvas');
+    const w = TVW_SNAP_W, h = Math.max(1, Math.round(w * v.videoHeight / v.videoWidth)), cv = tvw.snapCv;
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const t0 = performance.now(); cv.getContext('2d').drawImage(v, 0, 0, w, h);
+    const u = cv.toDataURL("image/jpeg", 0.5), ms = performance.now() - t0;
+    tvw.snaps.push({ t: now, j: u.slice(u.indexOf(',') + 1), w, h });
+    while (tvw.snaps.length && now - tvw.snaps[0].t > TVW_SNAP_KEEP_MS) tvw.snaps.shift();
+    if (ms > 40) { if (++tvw.snapSlow >= 5) { tvw.snapOff = true; tvw.snaps = []; gameLogEntry('CAM_SNAP_OFF', { reason: 'slow', ms: Math.round(ms) }); } } else tvw.snapSlow = 0;
+  } catch (e) { tvw.snapOff = true; tvw.snaps = []; gameLogEntry('CAM_SNAP_OFF', { reason: String(e && e.message || e) }); }
+}
+function tvwSnapDump(team, why) {                        // write the snapshots not yet saved (last 30 s at most) to the log
+  if (tvw.snapOff || !tvw.snaps.length || tvw.snapEvents >= TVW_SNAP_MAX_EVENTS || tvw.snapBytes > TVW_SNAP_MAX_BYTES) return;
+  const cut = Date.now() - 30000, fr = tvw.snaps.filter(x => !x.d && x.t >= cut); if (!fr.length) return;
+  fr.forEach(x => { x.d = 1; tvw.snapBytes += x.j.length; }); tvw.snapEvents++;
+  gameLogEntry('CAM_SNAP', { team, why: why || 'espn', n: fr.length, w: fr[0].w, h: fr[0].h, note: 'whole camera picture, JPEG base64; frame = [ms, jpeg]', frames: fr.map(x => [x.t, x.j]), boxes: tvw.boxes });
 }
 function tvwWatchdog(v, now, f) {
   if (v.currentTime !== tvw.lastCT) { tvw.lastCT = v.currentTime; tvw.lastCTAt = now; }
@@ -3932,6 +3964,7 @@ function tvwTick() {
     const ready = v.videoWidth && v.readyState >= 2;
     const f = ready ? { ana: tvwSample(tvw.boxes.ana), opp: tvwSample(tvw.boxes.opp), anc: tvwSample(tvw.boxes.anc) } : null;
     if (f) tvwFilmPush(f, now); tvw.lastF = f;
+    if (ready) tvwSnapPush(v, now);
     const frozen = tvwWatchdog(v, now, f);
     if (!frozen && f) { for (const e of tvw.core.step(f, now)) tvwEvent(e, now); tvwAnimTick(f, now); tvwQMon(f, now); }
     if (now - tvw.lastUiAt > 400) { tvw.lastUiAt = now; tvwUi(); }
